@@ -5,7 +5,7 @@
 
 namespace nsyshid
 {
-	DimensionsUSB g_infinitybase;
+	DimensionsUSB g_dimensionstoypad;
 
 	DimensionsToypadDevice::DimensionsToypadDevice()
 		: Device(0x0E6F, 0x0241, 1, 2, 0)

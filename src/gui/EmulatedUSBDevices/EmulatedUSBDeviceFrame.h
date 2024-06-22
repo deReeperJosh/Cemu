@@ -25,12 +25,14 @@ class EmulatedUSBDeviceFrame : public wxFrame {
   private:
 	wxCheckBox* m_emulatePortal;
 	wxCheckBox* m_emulateBase;
+	wxCheckBox* m_emulate_toypad;
 	std::array<wxTextCtrl*, nsyshid::MAX_SKYLANDERS> m_skylanderSlots;
 	std::array<wxTextCtrl*, nsyshid::MAX_FIGURES> m_infinitySlots;
 	std::array<std::optional<std::tuple<uint8, uint16, uint16>>, nsyshid::MAX_SKYLANDERS> m_skySlots;
 
 	wxPanel* AddSkylanderPage(wxNotebook* notebook);
 	wxPanel* AddInfinityPage(wxNotebook* notebook);
+	wxPanel* AddDimensionsPage(wxNotebook* notebook);
 	wxBoxSizer* AddSkylanderRow(uint8 row_number, wxStaticBox* box);
 	wxBoxSizer* AddInfinityRow(wxString name, uint8 row_number, wxStaticBox* box);
 	void LoadSkylander(uint8 slot);

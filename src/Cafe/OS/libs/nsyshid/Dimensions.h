@@ -39,6 +39,6 @@ namespace nsyshid
 	  protected:
 	  private:
 	};
-	extern DimensionsUSB g_infinitybase;
+	extern DimensionsUSB g_dimensionstoypad;
 
 } // namespace nsyshid

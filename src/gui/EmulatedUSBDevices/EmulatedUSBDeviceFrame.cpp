@@ -44,6 +44,7 @@ EmulatedUSBDeviceFrame::EmulatedUSBDeviceFrame(wxWindow* parent)
 
 	notebook->AddPage(AddSkylanderPage(notebook), _("Skylanders Portal"));
 	notebook->AddPage(AddInfinityPage(notebook), _("Infinity Base"));
+	notebook->AddPage(AddDimensionsPage(notebook), _("Dimensions Toypad"));
 
 	sizer->Add(notebook, 1, wxEXPAND | wxALL, 2);
 
@@ -120,7 +121,33 @@ wxPanel* EmulatedUSBDeviceFrame::AddInfinityPage(wxNotebook* notebook)
 	return panel;
 }
 
-wxBoxSizer* EmulatedUSBDeviceFrame::AddSkylanderRow(uint8 rowNumber,
+wxPanel* EmulatedUSBDeviceFrame::AddDimensionsPage(wxNotebook* notebook)
+{
+	auto* panel = new wxPanel(notebook);
+	auto* panel_sizer = new wxBoxSizer(wxVERTICAL);
+	auto* box = new wxStaticBox(panel, wxID_ANY, _("Dimensions Manager"));
+	auto* box_sizer = new wxStaticBoxSizer(box, wxVERTICAL);
+
+	auto* row = new wxBoxSizer(wxHORIZONTAL);
+
+	m_emulate_toypad =
+		new wxCheckBox(box, wxID_ANY, _("Emulate Dimensions Toypad"));
+	m_emulate_toypad->SetValue(
+		GetConfig().emulated_usb_devices.emulated_dimensions_toypad);
+	m_emulate_toypad->Bind(wxEVT_CHECKBOX, [this](wxCommandEvent&) {
+		GetConfig().emulated_usb_devices.emulated_dimensions_toypad =
+			m_emulate_toypad->IsChecked();
+		g_config.Save();
+	});
+	row->Add(m_emulate_toypad, 1, wxEXPAND | wxALL, 2);
+	box_sizer->Add(row, 1, wxEXPAND | wxALL, 2);
+	panel_sizer->Add(box_sizer, 1, wxEXPAND | wxALL, 2);
+	panel->SetSizerAndFit(panel_sizer);
+
+	return panel;
+}
+
+wxBoxSizer* EmulatedUSBDeviceFrame::AddSkylanderRow(uint8 row_number,
 													wxStaticBox* box)
 {
 	auto* row = new wxBoxSizer(wxHORIZONTAL);
@@ -307,8 +334,8 @@ CreateSkylanderDialog::CreateSkylanderDialog(wxWindow* parent, uint8 slot)
 			return;
 
 		m_filePath = saveFileDialog.GetPath();
-		
-		if(!nsyshid::g_skyportal.CreateSkylander(_utf8ToPath(m_filePath.utf8_string()), skyId, skyVar))
+
+		if (!nsyshid::g_skyportal.CreateSkylander(_utf8ToPath(m_filePath.utf8_string()), skyId, skyVar))
 		{
 			wxMessageDialog errorMessage(this, "Failed to create file");
 			errorMessage.ShowModal();
@@ -398,7 +425,8 @@ CreateInfinityFigureDialog::CreateInfinityFigureDialog(wxWindow* parent, uint8 s
 		{
 			wxMessageDialog idError(this, "Error Converting Figure Number!", "Number Entered is Invalid");
 			idError.ShowModal();
-			this->EndModal(0);;
+			this->EndModal(0);
+			;
 		}
 		uint32 figNum = longFigNum & 0xFFFFFFFF;
 		wxString predefName = nsyshid::g_infinitybase.FindFigure(figNum) + ".bin";
@@ -407,7 +435,8 @@ CreateInfinityFigureDialog::CreateInfinityFigureDialog(wxWindow* parent, uint8 s
 						   "BIN files (*.bin)|*.bin", wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
 
 		if (saveFileDialog.ShowModal() == wxID_CANCEL)
-			this->EndModal(0);;
+			this->EndModal(0);
+		;
 
 		m_filePath = saveFileDialog.GetPath();
 
