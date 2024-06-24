@@ -36,6 +36,16 @@ namespace nsyshid
 
 	class DimensionsUSB {
 	  public:
+		struct DimensionsMini final
+		{
+			std::FILE* dim_file;
+			std::array<uint8, 0x2D * 0x04> data{};
+			uint8 index = 255;
+			uint8 pad = 255;
+			uint8 id = 255;
+			void Save();
+		};
+
 		void send_command(uint8* buf, sint32 originalLength);
 		std::array<uint8, 32> get_status();
 
@@ -44,22 +54,37 @@ namespace nsyshid
 		void generate_seed(uint32 seed);
 		void get_challenge_response(uint8* buf, uint8 sequence,
 									std::array<uint8, 32>& reply_buf);
-		uint32 get_next();
+		void query_block(uint8 index, uint8 page, std::array<uint8, 32>& reply_buf,
+						 uint8 sequence);
+		void get_model(uint8* buf, uint8 sequence,
+					   std::array<uint8, 32>& reply_buf);
+
+		bool remove_figure();
+		uint8 load_figure();
 
 	  protected:
-		std::mutex m_infinity_mutex;
+		std::mutex m_dimensions_mutex;
+		std::array<DimensionsMini, 7> figures;
 
 	  private:
+		void random_uid(uint8* uid_buffer);
 		uint8 generate_checksum(const std::array<uint8, 32>& data,
 								int num_of_bytes) const;
 		std::array<uint8, 8> decrypt(uint8* buf);
 		std::array<uint8, 8> encrypt(uint8* buf);
+		uint32 get_next();
+		DimensionsMini& get_figure_by_index(uint8 index);
 
 		uint32 random_a;
 		uint32 random_b;
 		uint32 random_c;
 		uint32 random_d;
 
+		std::array<uint8, 7> batman_uid = {};
+		std::array<uint8, 7> gandalf_uid = {};
+		std::array<uint8, 7> wyldstyle_uid = {};
+
+		std::queue<std::array<uint8, 32>> m_figure_added_removed_responses;
 		std::queue<std::array<uint8, 32>> m_queries;
 	};
 	extern DimensionsUSB g_dimensionstoypad;

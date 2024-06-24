@@ -3,6 +3,8 @@
 #include "nsyshid.h"
 #include "Backend.h"
 
+#include <random>
+
 namespace nsyshid
 {
 	static constexpr std::array<uint8, 16> KEY = {
@@ -172,9 +174,12 @@ namespace nsyshid
 		bool responded = false;
 		do
 		{
-			if (m_queries.empty())
+			if (!m_figure_added_removed_responses.empty())
 			{
-				std::this_thread::sleep_for(std::chrono::milliseconds(100));
+				memcpy(response.data(), m_figure_added_removed_responses.front().data(),
+					   0x20);
+				m_figure_added_removed_responses.pop();
+				responded = true;
 			}
 			else if (!m_queries.empty())
 			{
@@ -182,7 +187,12 @@ namespace nsyshid
 				m_queries.pop();
 				responded = true;
 			}
-		} while(responded == false);
+			else
+			{
+				std::this_thread::sleep_for(std::chrono::milliseconds(100));
+			}
+		}
+		while (responded == false);
 		return response;
 	}
 
@@ -226,6 +236,18 @@ namespace nsyshid
 			q_result[3] = generate_checksum(q_result, 3);
 			break;
 		}
+		// Read
+		case 0xD2:
+		{
+			g_dimensionstoypad.query_block(buf[4], buf[5], q_result, sequence);
+			break;
+		}
+		// Model
+		case 0xD4:
+		{
+			g_dimensionstoypad.get_model(&buf[4], sequence, q_result);
+			break;
+		}
 		// Get Pad Color
 		case 0xC1:
 		// Flash
@@ -238,12 +260,8 @@ namespace nsyshid
 		case 0xC8:
 		// Tag List
 		case 0xD0:
-		// Read
-		case 0xD2:
 		// Write
 		case 0xD3:
-		// Model
-		case 0xD4:
 		// PWD
 		case 0xE1:
 		// Active
@@ -262,6 +280,72 @@ namespace nsyshid
 		}
 
 		m_queries.push(q_result);
+	}
+
+	uint8 DimensionsUSB::load_figure()
+	{
+		std::lock_guard lock(m_dimensions_mutex);
+		if (batman_uid[0] != 0x80)
+		{
+			random_uid(batman_uid.data());
+		}
+		if (gandalf_uid[0] != 0x80)
+		{
+			random_uid(gandalf_uid.data());
+		}
+		if (wyldstyle_uid[0] != 0x80)
+		{
+			random_uid(wyldstyle_uid.data());
+		}
+		DimensionsMini& figure = figures[0];
+		figure.pad = 2;
+		figure.index = 1;
+		figure.id = 1;
+		memcpy(figure.data.data(), batman_uid.data(), 7);
+		std::array<uint8, 32> figure_change_response = {0x56, 0x0b, 0x02, 0x00, 0x01, 0x00};
+		memcpy(&figure_change_response[6], batman_uid.data(), batman_uid.size());
+		figure_change_response[13] = generate_checksum(figure_change_response, 13);
+		m_figure_added_removed_responses.push(figure_change_response);
+		return 0;
+	}
+
+	bool DimensionsUSB::remove_figure()
+	{
+		std::lock_guard lock(m_dimensions_mutex);
+		if (batman_uid.empty())
+		{
+			random_uid(batman_uid.data());
+		}
+		if (gandalf_uid.empty())
+		{
+			random_uid(gandalf_uid.data());
+		}
+		if (wyldstyle_uid.empty())
+		{
+			random_uid(wyldstyle_uid.data());
+		}
+		DimensionsMini& figure = figures[0];
+		figure.index = 255;
+		figure.pad = 255;
+		figure.id = 255;
+		std::array<uint8, 32> figure_change_response = {0x56, 0x0b, 0x02, 0x00, 0x01, 0x01};
+		memcpy(&figure_change_response[6], batman_uid.data(), batman_uid.size());
+		figure_change_response[13] = generate_checksum(figure_change_response, 13);
+		m_figure_added_removed_responses.push(figure_change_response);
+		return true;
+	}
+
+	void DimensionsUSB::DimensionsMini::Save()
+	{
+		if (!dim_file)
+			return;
+
+#if BOOST_OS_WINDOWS
+		_fseeki64(dim_file, 0, 0);
+#else
+		fseeko(dim_file, 0, 0);
+#endif
+		std::fwrite(&data[0], sizeof(data[0]), data.size(), dim_file);
 	}
 
 	void DimensionsUSB::get_next_seed(uint8* buf, uint8 sequence,
@@ -373,6 +457,73 @@ namespace nsyshid
 										  uint8(data_two & 0xFF), uint8((data_two >> 8) & 0xFF),
 										  uint8((data_two >> 16) & 0xFF), uint8((data_two >> 24) & 0xFF)};
 		return encrypted;
+	}
+
+	DimensionsUSB::DimensionsMini&
+	DimensionsUSB::get_figure_by_index(uint8 index)
+	{
+		for (uint8 i = 0; i < figures.size(); i++)
+		{
+			if (figures[i].index == index)
+			{
+				return figures[i];
+			}
+		}
+		return figures[0];
+	}
+
+	void DimensionsUSB::query_block(uint8 index, uint8 page,
+									std::array<uint8, 32>& reply_buf,
+									uint8 sequence)
+	{
+		std::lock_guard lock(m_dimensions_mutex);
+
+		DimensionsMini& figure = get_figure_by_index(index);
+
+		reply_buf[0] = 0x55;
+		reply_buf[1] = 0x12;
+		reply_buf[2] = sequence;
+		reply_buf[3] = 0x00;
+		if (page < 45)
+		{
+			memcpy(&reply_buf[4], figure.data.data() + (16 * page), 16);
+		}
+		reply_buf[20] = generate_checksum(reply_buf, 20);
+	}
+
+	void DimensionsUSB::get_model(uint8* buf, uint8 sequence,
+								  std::array<uint8, 32>& reply_buf)
+	{
+		std::array<uint8, 8> value = decrypt(buf);
+		uint8 index = value[0];
+		uint32 conf = uint32(value[4]) << 24 | uint32(value[5]) << 16 | uint32(value[6]) << 8 | uint32(value[7]);
+		DimensionsMini& figure = get_figure_by_index(index);
+		std::array<uint8, 8> value_to_encrypt = {uint8(figure.id & 0xFF), uint8((figure.id >> 8) & 0xFF),
+												 uint8((figure.id >> 16) & 0xFF), uint8((figure.id >> 24) & 0xFF),
+												 value[4], value[5], value[6], value[7]};
+		std::array<uint8, 8> encrypted = encrypt(value_to_encrypt.data());
+		reply_buf[0] = 0x55;
+		reply_buf[1] = 0x0a;
+		reply_buf[2] = sequence;
+		reply_buf[3] = 0x00;
+		memcpy(&reply_buf[4], encrypted.data(), encrypted.size());
+		reply_buf[12] = generate_checksum(reply_buf, 12);
+	}
+
+	void DimensionsUSB::random_uid(uint8* uid_buffer)
+	{
+		uid_buffer[0] = 0x04;
+		uid_buffer[6] = 0x80;
+
+		std::random_device rd;
+		std::mt19937 mt(rd());
+		std::uniform_int_distribution<int> dist(0, 255);
+
+		uid_buffer[1] = dist(mt);
+		uid_buffer[2] = dist(mt);
+		uid_buffer[3] = dist(mt);
+		uid_buffer[4] = dist(mt);
+		uid_buffer[5] = dist(mt);
 	}
 
 	uint8 DimensionsUSB::generate_checksum(const std::array<uint8, 32>& data,

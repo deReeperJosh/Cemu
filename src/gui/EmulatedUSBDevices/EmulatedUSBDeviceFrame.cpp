@@ -8,6 +8,7 @@
 #include "util/helpers/helpers.h"
 
 #include "Cafe/OS/libs/nsyshid/nsyshid.h"
+#include "Cafe/OS/libs/nsyshid/Dimensions.h"
 
 #include "Common/FileStream.h"
 
@@ -141,6 +142,18 @@ wxPanel* EmulatedUSBDeviceFrame::AddDimensionsPage(wxNotebook* notebook)
 	});
 	row->Add(m_emulate_toypad, 1, wxEXPAND | wxALL, 2);
 	box_sizer->Add(row, 1, wxEXPAND | wxALL, 2);
+	auto* button_row = new wxBoxSizer(wxHORIZONTAL);
+	auto* load_button = new wxButton(box, wxID_ANY, _("Load"));
+	load_button->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) {
+		nsyshid::g_dimensionstoypad.load_figure();
+	});
+	auto* clear_button = new wxButton(box, wxID_ANY, _("Clear"));
+	clear_button->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) {
+		nsyshid::g_dimensionstoypad.remove_figure();
+	});
+	button_row->Add(load_button, 1, wxEXPAND | wxALL, 2);
+	button_row->Add(clear_button, 1, wxEXPAND | wxALL, 2);
+	box_sizer->Add(button_row, 1, wxEXPAND | wxALL, 2);
 	panel_sizer->Add(box_sizer, 1, wxEXPAND | wxALL, 2);
 	panel->SetSizerAndFit(panel_sizer);
 
