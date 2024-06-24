@@ -5,6 +5,10 @@
 
 namespace nsyshid
 {
+	static constexpr std::array<uint8, 16> KEY = {
+		0x55, 0xFE, 0xF6, 0xB0, 0x62, 0xBF, 0x0B, 0x41,
+		0xC9, 0xB3, 0x7C, 0xB4, 0x97, 0x3E, 0x29, 0x7B};
+
 	DimensionsUSB g_dimensionstoypad;
 
 	DimensionsToypadDevice::DimensionsToypadDevice()
@@ -35,15 +39,52 @@ namespace nsyshid
 		return m_IsOpened;
 	}
 
+	std::string HexDump(const uint8* data, size_t size)
+	{
+		constexpr size_t BYTES_PER_LINE = 16;
+
+		std::string out;
+		for (size_t row_start = 0; row_start < size; row_start += BYTES_PER_LINE)
+		{
+			out += fmt::format("{:06x}: ", row_start);
+			for (size_t i = 0; i < BYTES_PER_LINE; ++i)
+			{
+				if (row_start + i < size)
+				{
+					out += fmt::format("{:02x} ", data[row_start + i]);
+				}
+				else
+				{
+					out += "   ";
+				}
+			}
+			out += " ";
+			for (size_t i = 0; i < BYTES_PER_LINE; ++i)
+			{
+				if (row_start + i < size)
+				{
+					char c = static_cast<char>(data[row_start + i]);
+					out += std::isprint(c, std::locale::classic()) ? c : '.';
+				}
+			}
+			out += "\n";
+		}
+		return out;
+	}
+
 	Device::ReadResult DimensionsToypadDevice::Read(ReadMessage* message)
 	{
-		cemuLog_logDebug(LogType::Force, "Toypad Read");
+		memcpy(message->data, g_dimensionstoypad.get_status().data(), message->length);
+		cemuLog_log(LogType::Force, "Toypad Read Response: \n{}", HexDump(message->data, message->length));
+		message->bytesRead = message->length;
 		return Device::ReadResult::Success;
 	}
 
 	Device::WriteResult DimensionsToypadDevice::Write(WriteMessage* message)
 	{
-		cemuLog_logDebug(LogType::Force, "Toypad Write");
+		cemuLog_log(LogType::Force, "Toypad Write Request: \n{}", HexDump(message->data, message->length));
+		g_dimensionstoypad.send_command(message->data, message->length);
+		message->bytesWritten = message->length;
 		return Device::WriteResult::Success;
 	}
 
@@ -114,13 +155,234 @@ namespace nsyshid
 
 	bool DimensionsToypadDevice::SetProtocol(uint32 ifIndex, uint32 protocol)
 	{
-		cemuLog_logDebug(LogType::Force, "Toypad Protocol");
+		cemuLog_log(LogType::Force, "Toypad Protocol");
 		return true;
 	}
 
 	bool DimensionsToypadDevice::SetReport(ReportMessage* message)
 	{
-		cemuLog_logDebug(LogType::Force, "Toypad Report");
+		cemuLog_log(LogType::Force, "Toypad Report");
 		return true;
+	}
+
+	std::array<uint8, 32> DimensionsUSB::get_status()
+	{
+		std::array<uint8, 32> response = {};
+
+		bool responded = false;
+		do
+		{
+			if (m_queries.empty())
+			{
+				std::this_thread::sleep_for(std::chrono::milliseconds(100));
+			}
+			else if (!m_queries.empty())
+			{
+				memcpy(response.data(), m_queries.front().data(), 0x20);
+				m_queries.pop();
+				responded = true;
+			}
+		} while(responded == false);
+		return response;
+	}
+
+	void DimensionsUSB::send_command(uint8* buf, sint32 originalLength)
+	{
+		const uint8 command = buf[2];
+		const uint8 sequence = buf[3];
+
+		std::array<uint8, 32> q_result{};
+
+		switch (command)
+		{
+		// Wake
+		case 0xB0:
+		{
+			q_result = {0x55, 0x0e, 0x01, 0x28, 0x63, 0x29,
+						0x20, 0x4c, 0x45, 0x47, 0x4f, 0x20,
+						0x32, 0x30, 0x31, 0x34, 0x46};
+			break;
+		}
+		// Seed
+		case 0xB1:
+		{
+			g_dimensionstoypad.get_next_seed(&buf[4], sequence, q_result);
+			break;
+		}
+		// Challenge
+		case 0xB3:
+		{
+			g_dimensionstoypad.get_challenge_response(&buf[4], sequence, q_result);
+			break;
+		}
+		// Color
+		case 0xC0:
+		// Fade
+		case 0xC2:
+		// Fade All
+		case 0xC6:
+		{
+			q_result = {0x55, 0x01, sequence};
+			q_result[3] = generate_checksum(q_result, 3);
+			break;
+		}
+		// Get Pad Color
+		case 0xC1:
+		// Flash
+		case 0xC3:
+		// Fade Random
+		case 0xC4:
+		// Flash All
+		case 0xC7:
+		// Color All
+		case 0xC8:
+		// Tag List
+		case 0xD0:
+		// Read
+		case 0xD2:
+		// Write
+		case 0xD3:
+		// Model
+		case 0xD4:
+		// PWD
+		case 0xE1:
+		// Active
+		case 0xE5:
+		// LEDS Query
+		case 0xFF:
+		{
+			cemuLog_log(LogType::Force, "Unimplemented LD Function: {:x}", command);
+			break;
+		}
+		default:
+		{
+			cemuLog_log(LogType::Force, "Unknown LD Function: {:x}", command);
+			break;
+		}
+		}
+
+		m_queries.push(q_result);
+	}
+
+	void DimensionsUSB::get_next_seed(uint8* buf, uint8 sequence,
+									  std::array<uint8, 32>& reply_buf)
+	{
+		std::array<uint8, 8> value = decrypt(buf);
+		uint32 seed = uint32(value[3]) << 24 | uint32(value[2]) << 16 | uint32(value[1]) << 8 | uint32(value[0]);
+		uint32 conf = uint32(value[4]) << 24 | uint32(value[5]) << 16 | uint32(value[6]) << 8 | uint32(value[7]);
+		generate_seed(seed);
+		std::array<uint8, 8> value_to_encrypt = {value[4], value[5], value[6], value[7], 0, 0, 0, 0};
+		std::array<uint8, 8> encrypted = encrypt(value_to_encrypt.data());
+		reply_buf[0] = 0x55;
+		reply_buf[1] = 0x09;
+		reply_buf[2] = sequence;
+		memcpy(&reply_buf[3], encrypted.data(), encrypted.size());
+		reply_buf[11] = generate_checksum(reply_buf, 11);
+	}
+
+	void DimensionsUSB::get_challenge_response(uint8* buf, uint8 sequence,
+											   std::array<uint8, 32>& reply_buf)
+	{
+		std::array<uint8, 8> value = decrypt(buf);
+		uint32 conf = uint32(value[0]) << 24 | uint32(value[1]) << 16 | uint32(value[2]) << 8 | uint32(value[3]);
+		uint32 next_random = get_next();
+		std::array<uint8, 8> value_to_encrypt = {uint8(next_random & 0xFF), uint8((next_random >> 8) & 0xFF),
+												 uint8((next_random >> 16) & 0xFF), uint8((next_random >> 24) & 0xFF),
+												 value[0], value[1], value[2], value[3]};
+		std::array<uint8, 8> encrypted = encrypt(value_to_encrypt.data());
+		reply_buf[0] = 0x55;
+		reply_buf[1] = 0x09;
+		reply_buf[2] = sequence;
+		memcpy(&reply_buf[3], encrypted.data(), encrypted.size());
+		reply_buf[11] = generate_checksum(reply_buf, 11);
+	}
+
+	void DimensionsUSB::generate_seed(uint32 seed)
+	{
+		random_a = 0xF1EA5EED;
+		random_b = seed;
+		random_c = seed;
+		random_d = seed;
+
+		for (int i = 0; i < 42; i++)
+		{
+			get_next();
+		}
+	}
+
+	uint32 DimensionsUSB::get_next()
+	{
+		uint32 e = random_a - std::rotl(random_b, 21);
+		random_a = random_b ^ std::rotl(random_c, 19);
+		random_b = random_c + std::rotl(random_d, 6);
+		random_c = random_d + e;
+		random_d = e + random_a;
+		return random_d;
+	}
+
+	std::array<uint8, 8> DimensionsUSB::decrypt(uint8* buf)
+	{
+		uint32 data_one = uint32(buf[3]) << 24 | uint32(buf[2]) << 16 | uint32(buf[1]) << 8 | uint32(buf[0]);
+		uint32 data_two = uint32(buf[7]) << 24 | uint32(buf[6]) << 16 | uint32(buf[5]) << 8 | uint32(buf[4]);
+
+		uint32 key_one = uint32(KEY[3]) << 24 | uint32(KEY[2]) << 16 | uint32(KEY[1]) << 8 | uint32(KEY[0]);
+		uint32 key_two = uint32(KEY[7]) << 24 | uint32(KEY[6]) << 16 | uint32(KEY[5]) << 8 | uint32(KEY[4]);
+		uint32 key_three = uint32(KEY[11]) << 24 | uint32(KEY[10]) << 16 | uint32(KEY[9]) << 8 | uint32(KEY[8]);
+		uint32 key_four = uint32(KEY[15]) << 24 | uint32(KEY[14]) << 16 | uint32(KEY[13]) << 8 | uint32(KEY[12]);
+
+		uint32 sum = 0xC6EF3720;
+		uint32 delta = 0x9E3779B9;
+
+		for (int i = 0; i < 32; i++)
+		{
+			data_two -= (((data_one << 4) + key_three) ^ (data_one + sum) ^ ((data_one >> 5) + key_four)) >> 0;
+			data_one -= (((data_two << 4) + key_one) ^ (data_two + sum) ^ ((data_two >> 5) + key_two)) >> 0;
+			sum -= delta;
+			sum >>= 0;
+		}
+
+		std::array<uint8, 8> decrypted = {uint8(data_one & 0xFF), uint8((data_one >> 8) & 0xFF),
+										  uint8((data_one >> 16) & 0xFF), uint8((data_one >> 24) & 0xFF),
+										  uint8(data_two & 0xFF), uint8((data_two >> 8) & 0xFF),
+										  uint8((data_two >> 16) & 0xFF), uint8((data_two >> 24) & 0xFF)};
+		return decrypted;
+	}
+	std::array<uint8, 8> DimensionsUSB::encrypt(uint8* buf)
+	{
+		uint32 data_one = uint32(buf[3]) << 24 | uint32(buf[2]) << 16 | uint32(buf[1]) << 8 | uint32(buf[0]);
+		uint32 data_two = uint32(buf[7]) << 24 | uint32(buf[6]) << 16 | uint32(buf[5]) << 8 | uint32(buf[4]);
+
+		uint32 key_one = uint32(KEY[3]) << 24 | uint32(KEY[2]) << 16 | uint32(KEY[1]) << 8 | uint32(KEY[0]);
+		uint32 key_two = uint32(KEY[7]) << 24 | uint32(KEY[6]) << 16 | uint32(KEY[5]) << 8 | uint32(KEY[4]);
+		uint32 key_three = uint32(KEY[11]) << 24 | uint32(KEY[10]) << 16 | uint32(KEY[9]) << 8 | uint32(KEY[8]);
+		uint32 key_four = uint32(KEY[15]) << 24 | uint32(KEY[14]) << 16 | uint32(KEY[13]) << 8 | uint32(KEY[12]);
+
+		uint32 sum = 0;
+		uint32 delta = 0x9E3779B9;
+
+		for (int i = 0; i < 32; i++)
+		{
+			sum += delta;
+			sum >>= 0;
+			data_one += (((data_two << 4) + key_one) ^ (data_two + sum) ^ ((data_two >> 5) + key_two)) >> 0;
+			data_two += (((data_one << 4) + key_three) ^ (data_one + sum) ^ ((data_one >> 5) + key_four)) >> 0;
+		}
+
+		std::array<uint8, 8> encrypted = {uint8(data_one & 0xFF), uint8((data_one >> 8) & 0xFF),
+										  uint8((data_one >> 16) & 0xFF), uint8((data_one >> 24) & 0xFF),
+										  uint8(data_two & 0xFF), uint8((data_two >> 8) & 0xFF),
+										  uint8((data_two >> 16) & 0xFF), uint8((data_two >> 24) & 0xFF)};
+		return encrypted;
+	}
+
+	uint8 DimensionsUSB::generate_checksum(const std::array<uint8, 32>& data,
+										   int num_of_bytes) const
+	{
+		int checksum = 0;
+		for (int i = 0; i < num_of_bytes; i++)
+		{
+			checksum += data[i];
+		}
+		return (checksum & 0xFF);
 	}
 } // namespace nsyshid
