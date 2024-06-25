@@ -282,70 +282,72 @@ namespace nsyshid
 		m_queries.push(q_result);
 	}
 
-	uint8 DimensionsUSB::load_figure()
+	uint16 DimensionsUSB::get_figure(uint8 index)
 	{
-		std::lock_guard lock(m_dimensions_mutex);
-		if (batman_uid[0] != 0x80)
+		DimensionsMini& figure = figures[index - 1];
+		if (figure.id != 0)
 		{
-			random_uid(batman_uid.data());
+			return figure.id;
 		}
-		if (gandalf_uid[0] != 0x80)
-		{
-			random_uid(gandalf_uid.data());
-		}
-		if (wyldstyle_uid[0] != 0x80)
-		{
-			random_uid(wyldstyle_uid.data());
-		}
-		DimensionsMini& figure = figures[0];
-		figure.pad = 2;
-		figure.index = 1;
-		figure.id = 1;
-		memcpy(figure.data.data(), batman_uid.data(), 7);
-		std::array<uint8, 32> figure_change_response = {0x56, 0x0b, 0x02, 0x00, 0x01, 0x00};
-		memcpy(&figure_change_response[6], batman_uid.data(), batman_uid.size());
-		figure_change_response[13] = generate_checksum(figure_change_response, 13);
-		m_figure_added_removed_responses.push(figure_change_response);
 		return 0;
 	}
 
-	bool DimensionsUSB::remove_figure()
+	uint16 DimensionsUSB::load_figure(const std::array<uint8, 0x2D * 0x04>& buf, std::FILE* file, uint8 pad, uint8 index)
 	{
 		std::lock_guard lock(m_dimensions_mutex);
-		if (batman_uid.empty())
+		uint16 id = uint16(buf[0x0E]) << 8 | uint16(buf[0x0F]);
+
+		DimensionsMini& figure = figures[index - 1];
+		figure.dim_file = std::move(file);
+		figure.id = id;
+		figure.pad = pad;
+		figure.index = index;
+		memcpy(figure.data.data(), buf.data(), buf.size());
+		std::array<uint8, 32> figure_change_response = {0x56, 0x0b, pad, 0x00, index, 0x00};
+		memcpy(&figure_change_response[6], buf.data(), 7);
+		figure_change_response[13] = generate_checksum(figure_change_response, 13);
+		m_figure_added_removed_responses.push(figure_change_response);
+		return id;
+	}
+
+	bool DimensionsUSB::remove_figure(uint8 pad, uint8 index)
+	{
+		std::lock_guard lock(m_dimensions_mutex);
+		DimensionsMini& figure = figures[index - 1];
+		if (figure.index == 255)
 		{
-			random_uid(batman_uid.data());
+			return false;
 		}
-		if (gandalf_uid.empty())
-		{
-			random_uid(gandalf_uid.data());
-		}
-		if (wyldstyle_uid.empty())
-		{
-			random_uid(wyldstyle_uid.data());
-		}
-		DimensionsMini& figure = figures[0];
+		figure.Save();
+    	std::fclose(figure.dim_file);
 		figure.index = 255;
 		figure.pad = 255;
-		figure.id = 255;
-		std::array<uint8, 32> figure_change_response = {0x56, 0x0b, 0x02, 0x00, 0x01, 0x01};
-		memcpy(&figure_change_response[6], batman_uid.data(), batman_uid.size());
+		figure.id = 0;
+		std::array<uint8, 32> figure_change_response = {0x56, 0x0b, pad, 0x00, index, 0x01};
+		memcpy(&figure_change_response[6], figure.data.data(), 7);
 		figure_change_response[13] = generate_checksum(figure_change_response, 13);
 		m_figure_added_removed_responses.push(figure_change_response);
 		return true;
 	}
 
-	void DimensionsUSB::DimensionsMini::Save()
+	bool DimensionsUSB::create_figure(const std::string& file_path, uint16 id)
 	{
+		FILE* dim_file = std::fopen(file_path.c_str(), "w+b");
 		if (!dim_file)
-			return;
-
-#if BOOST_OS_WINDOWS
-		_fseeki64(dim_file, 0, 0);
-#else
-		fseeko(dim_file, 0, 0);
-#endif
-		std::fwrite(&data[0], sizeof(data[0]), data.size(), dim_file);
+		{
+			return false;
+		}
+		std::array<uint8, 0x2D * 0x04> file_data{};
+		random_uid(file_data.data());
+		file_data[0x0E] = uint8((id >> 8) & 0xFF);
+		file_data[0x0F] = uint8(id & 0xFF);
+		if (file_data.size() != std::fwrite(file_data.data(), sizeof file_data[0], file_data.size(), dim_file))
+		{
+			return false;
+		}
+		std::fclose(dim_file);
+		cemuLog_log(LogType::Force, "File data: \n{}", HexDump(file_data.data(), file_data.size()));
+		return true;
 	}
 
 	void DimensionsUSB::get_next_seed(uint8* buf, uint8 sequence,
@@ -535,5 +537,18 @@ namespace nsyshid
 			checksum += data[i];
 		}
 		return (checksum & 0xFF);
+	}
+
+	void DimensionsUSB::DimensionsMini::Save()
+	{
+		if (!dim_file)
+			return;
+
+#if BOOST_OS_WINDOWS
+		_fseeki64(dim_file, 0, 0);
+#else
+		fseeko(dim_file, 0, 0);
+#endif
+		std::fwrite(&data[0], sizeof(data[0]), data.size(), dim_file);
 	}
 } // namespace nsyshid

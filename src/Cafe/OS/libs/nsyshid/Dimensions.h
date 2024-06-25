@@ -42,7 +42,7 @@ namespace nsyshid
 			std::array<uint8, 0x2D * 0x04> data{};
 			uint8 index = 255;
 			uint8 pad = 255;
-			uint8 id = 255;
+			uint8 id = 0;
 			void Save();
 		};
 
@@ -59,8 +59,10 @@ namespace nsyshid
 		void get_model(uint8* buf, uint8 sequence,
 					   std::array<uint8, 32>& reply_buf);
 
-		bool remove_figure();
-		uint8 load_figure();
+		uint16 get_figure(uint8 index);
+		bool remove_figure(uint8 pad, uint8 index);
+		uint16 load_figure(const std::array<uint8, 0x2D * 0x04>& buf, std::FILE* file, uint8 pad, uint8 index);
+		bool create_figure(const std::string& file_path, uint16 id);
 
 	  protected:
 		std::mutex m_dimensions_mutex;

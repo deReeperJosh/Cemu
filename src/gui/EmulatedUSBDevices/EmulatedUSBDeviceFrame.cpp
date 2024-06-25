@@ -1,4 +1,4 @@
-#include "gui/EmulatedUSBDevices/EmulatedUSBDeviceFrame.h"
+#include "EmulatedUSBDeviceFrame.h"
 
 #include <algorithm>
 
@@ -14,9 +14,11 @@
 
 #include <wx/arrstr.h>
 #include <wx/button.h>
+#include <wx/combobox.h>
 #include <wx/checkbox.h>
 #include <wx/combobox.h>
 #include <wx/filedlg.h>
+#include <wx/log.h>
 #include <wx/msgdlg.h>
 #include <wx/notebook.h>
 #include <wx/panel.h>
@@ -30,7 +32,95 @@
 #include <wx/wfstream.h>
 
 #include "resource/embedded/resources.h"
-#include "EmulatedUSBDeviceFrame.h"
+
+
+const std::map<const uint16, const std::string> list_minis = {
+	{1, "Batman"},
+	{2, "Gandalf"},
+	{3, "Wyldstyle"},
+	{4, "Aquaman"},
+	{5, "Bad Cop"},
+	{6, "Bane"},
+	{7, "Bart Simpson"},
+	{8, "Benny"},
+	{9, "Chell"},
+	{10, "Cole"},
+	{11, "Cragger"},
+	{12, "Cyborg"},
+	{13, "Cyberman"},
+	{14, "Doc Brown"},
+	{15, "The Doctor"},
+	{16, "Emmet"},
+	{17, "Eris"},
+	{18, "Gimli"},
+	{19, "Gollum"},
+	{20, "Harley Quinn"},
+	{21, "Homer Simpson"},
+	{22, "Jay"},
+	{23, "Joker"},
+	{24, "Kai"},
+	{25, "ACU Trooper"},
+	{26, "Gamer Kid"},
+	{27, "Krusty the Clown"},
+	{28, "Laval"},
+	{29, "Legolas"},
+	{30, "Lloyd"},
+	{31, "Marty McFly"},
+	{32, "Nya"},
+	{33, "Owen Grady"},
+	{34, "Peter Venkman"},
+	{35, "Slimer"},
+	{36, "Scooby-Doo"},
+	{37, "Sensei Wu"},
+	{38, "Shaggy"},
+	{39, "Stay Puft"},
+	{40, "Superman"},
+	{41, "Unikitty"},
+	{42, "Wicked Witch of the West"},
+	{43, "Wonder Woman"},
+	{44, "Zane"},
+	{45, "Green Arrow"},
+	{46, "Supergirl"},
+	{47, "Abby Yates"},
+	{48, "Finn the Human"},
+	{49, "Ethan Hunt"},
+	{50, "Lumpy Space Princess"},
+	{51, "Jake the Dog"},
+	{52, "Harry Potter"},
+	{53, "Lord Voldemort"},
+	{54, "Michael Knight"},
+	{55, "B.A. Baracus"},
+	{56, "Newt Scamander"},
+	{57, "Sonic the Hedgehog"},
+	{58, "Future Update (unreleased)"},
+	{59, "Gizmo"},
+	{60, "Stripe"},
+	{61, "E.T."},
+	{62, "Tina Goldstein"},
+	{63, "Marceline the Vampire Queen"},
+	{64, "Batgirl"},
+	{65, "Robin"},
+	{66, "Sloth"},
+	{67, "Hermione Granger"},
+	{68, "Chase McCain"},
+	{69, "Excalibur Batman"},
+	{70, "Raven"},
+	{71, "Beast Boy"},
+	{72, "Betelgeuse"},
+	{73, "Lord Vortech (unreleased)"},
+	{74, "Blossom"},
+	{75, "Bubbles"},
+	{76, "Buttercup"},
+	{77, "Starfire"},
+	{78, "World 15 (unreleased)"},
+	{79, "World 16 (unreleased)"},
+	{80, "World 17 (unreleased)"},
+	{81, "World 18 (unreleased)"},
+	{82, "World 19 (unreleased)"},
+	{83, "World 20 (unreleased)"},
+	{768, "Unknown 768"},
+	{769, "Supergirl Red Lantern"},
+	{770, "Unknown 770"}};
 
 EmulatedUSBDeviceFrame::EmulatedUSBDeviceFrame(wxWindow* parent)
 	: wxFrame(parent, wxID_ANY, _("Emulated USB Devices"), wxDefaultPosition,
@@ -142,18 +232,25 @@ wxPanel* EmulatedUSBDeviceFrame::AddDimensionsPage(wxNotebook* notebook)
 	});
 	row->Add(m_emulate_toypad, 1, wxEXPAND | wxALL, 2);
 	box_sizer->Add(row, 1, wxEXPAND | wxALL, 2);
-	auto* button_row = new wxBoxSizer(wxHORIZONTAL);
-	auto* load_button = new wxButton(box, wxID_ANY, _("Load"));
-	load_button->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) {
-		nsyshid::g_dimensionstoypad.load_figure();
-	});
-	auto* clear_button = new wxButton(box, wxID_ANY, _("Clear"));
-	clear_button->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) {
-		nsyshid::g_dimensionstoypad.remove_figure();
-	});
-	button_row->Add(load_button, 1, wxEXPAND | wxALL, 2);
-	button_row->Add(clear_button, 1, wxEXPAND | wxALL, 2);
-	box_sizer->Add(button_row, 1, wxEXPAND | wxALL, 2);
+	auto* top_row = new wxBoxSizer(wxHORIZONTAL);
+	auto* bottom_row = new wxBoxSizer(wxHORIZONTAL);
+
+	auto* dummy = new wxStaticText(box, wxID_ANY, "");
+
+	top_row->Add(AddDimensionPanel(2, 1, box), 1, wxEXPAND | wxALL, 2);
+	top_row->Add(dummy, 1, wxEXPAND | wxLEFT | wxRIGHT, 2);
+	top_row->Add(AddDimensionPanel(1, 2, box), 1, wxEXPAND | wxALL, 2);
+	top_row->Add(dummy, 1, wxEXPAND | wxLEFT | wxRIGHT, 2);
+	top_row->Add(AddDimensionPanel(3, 3, box), 1, wxEXPAND | wxALL, 2);
+
+	bottom_row->Add(AddDimensionPanel(2, 4, box), 1, wxEXPAND | wxALL, 2);
+	bottom_row->Add(AddDimensionPanel(2, 5, box), 1, wxEXPAND | wxALL, 2);
+	bottom_row->Add(dummy, 1, wxEXPAND | wxLEFT | wxRIGHT, 0);
+	bottom_row->Add(AddDimensionPanel(3, 6, box), 1, wxEXPAND | wxALL, 2);
+	bottom_row->Add(AddDimensionPanel(3, 7, box), 1, wxEXPAND | wxALL, 2);
+
+	box_sizer->Add(top_row, 1, wxEXPAND | wxALL, 2);
+	box_sizer->Add(bottom_row, 1, wxEXPAND | wxALL, 2);
 	panel_sizer->Add(box_sizer, 1, wxEXPAND | wxALL, 2);
 	panel->SetSizerAndFit(panel_sizer);
 
@@ -222,6 +319,64 @@ wxBoxSizer* EmulatedUSBDeviceFrame::AddInfinityRow(wxString name, uint8 rowNumbe
 	row->Add(clearButton, 1, wxEXPAND | wxALL, 2);
 
 	return row;
+}
+
+wxBoxSizer* EmulatedUSBDeviceFrame::AddDimensionPanel(uint8 pad, uint8 index, wxStaticBox* box)
+{
+	auto* panel = new wxBoxSizer(wxVERTICAL);
+
+	auto* combo_row = new wxBoxSizer(wxHORIZONTAL);
+	m_dimension_slots[index - 1] = new wxComboBox(box, wxID_ANY);
+	m_dimension_slots[index - 1]->Append("None");
+	for (auto it = list_minis.begin(); it != list_minis.end(); it++)
+	{
+		m_dimension_slots[index - 1]->Append(it->second);
+	}
+	m_dimension_slots[index - 1]->SetSelection(0);
+	combo_row->Add(m_dimension_slots[index - 1], 1, wxEXPAND | wxALL, 2);
+	auto* create_button = new wxButton(box, wxID_ANY, _("Create"));
+	create_button->Bind(wxEVT_BUTTON, [pad, index, this](wxCommandEvent&) {
+		int selection = m_dimension_slots[index - 1]->GetSelection();
+		if (selection != wxNOT_FOUND)
+		{
+			if (selection == 0)
+			{
+				wxMessageDialog errorMessage(this, "Choose a figure from the list before creating");
+				errorMessage.ShowModal();
+				return;
+			}
+			uint16 current_id = nsyshid::g_dimensionstoypad.get_figure(index);
+			auto it = list_minis.find(current_id);
+			if (it == list_minis.end() || m_dimension_slots[index - 1]->FindString(it->second) != selection)
+			{
+				cemuLog_log(LogType::Force, "Creating");
+				CreateMinifig(pad, index);
+			}
+			else
+			{
+				wxMessageDialog errorMessage(this, "Choose a different figure to create than the currently placed figure!");
+				errorMessage.ShowModal();
+			}
+		}
+	});
+	combo_row->Add(create_button, 1, wxEXPAND | wxALL, 2);
+
+	auto* button_row = new wxBoxSizer(wxHORIZONTAL);
+	auto* load_button = new wxButton(box, wxID_ANY, _("Load"));
+	load_button->Bind(wxEVT_BUTTON, [pad, index, this](wxCommandEvent&) {
+		LoadMinifig(pad, index);
+	});
+	auto* clear_button = new wxButton(box, wxID_ANY, _("Clear"));
+	clear_button->Bind(wxEVT_BUTTON, [pad, index, this](wxCommandEvent&) {
+		ClearMinifig(pad, index);
+	});
+	button_row->Add(load_button, 1, wxEXPAND | wxALL, 2);
+	button_row->Add(clear_button, 1, wxEXPAND | wxALL, 2);
+
+	panel->Add(combo_row, 1, wxEXPAND | wxALL, 2);
+	panel->Add(button_row, 1, wxEXPAND | wxALL, 2);
+
+	return panel;
 }
 
 void EmulatedUSBDeviceFrame::LoadSkylander(uint8 slot)
@@ -486,6 +641,79 @@ CreateInfinityFigureDialog::CreateInfinityFigureDialog(wxWindow* parent, uint8 s
 wxString CreateInfinityFigureDialog::GetFilePath() const
 {
 	return m_filePath;
+}
+
+void EmulatedUSBDeviceFrame::LoadMinifig(uint8 pad, uint8 index)
+{
+	wxFileDialog openFileDialog(this, _("Load Dimensions Figure"), "", "",
+								"Dimensions files (*.bin)|*.bin",
+								wxFD_OPEN | wxFD_FILE_MUST_EXIST);
+	if (openFileDialog.ShowModal() != wxID_OK || openFileDialog.GetPath().empty())
+		return;
+
+	LoadMinifigPath(openFileDialog.GetPath(), pad, index);
+}
+void EmulatedUSBDeviceFrame::LoadMinifigPath(wxString path_name, uint8 pad, uint8 index)
+{
+	FILE* dim_file = std::fopen(path_name.c_str(), "r+b");
+	if (!dim_file)
+	{
+		wxMessageDialog errorMessage(this, "Failed to open minifig file");
+		errorMessage.ShowModal();
+		return;
+	}
+
+	std::array<uint8, 0x2D * 0x04> file_data;
+
+	if (file_data.size() != std::fread(file_data.data(), sizeof file_data[0], file_data.size(), dim_file))
+	{
+		wxMessageDialog errorMessage(this, "Failed to read minifig file data");
+		errorMessage.ShowModal();
+		return;
+	}
+
+	ClearMinifig(pad, index);
+
+	uint16 id = nsyshid::g_dimensionstoypad.load_figure(file_data, std::move(dim_file), pad, index);
+	m_dimension_slots[index - 1]->SetSelection(m_dimension_slots[index - 1]->FindString(list_minis.at(id)));
+}
+void EmulatedUSBDeviceFrame::ClearMinifig(uint8 pad, uint8 index)
+{
+	nsyshid::g_dimensionstoypad.remove_figure(pad, index);
+	m_dimension_slots[index - 1]->SetSelection(0);
+}
+void EmulatedUSBDeviceFrame::CreateMinifig(uint8 pad, uint8 index)
+{
+	uint16 mini_id = 0;
+	for (auto it = list_minis.begin(); it != list_minis.end(); it++)
+	{
+		if (it->second == m_dimension_slots[index - 1]->GetStringSelection())
+		{
+			mini_id = it->first;
+		}
+	}
+	wxFileDialog createFileDialog(this, _("Create Dimensions Figure"), "", _(m_dimension_slots[index - 1]->GetStringSelection().Append(".bin")),
+								  "Dimensions files (*.bin)|*.bin",
+								  wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
+	if (createFileDialog.ShowModal() == wxID_CANCEL)
+		return;
+
+	wxFileOutputStream output_stream(createFileDialog.GetPath());
+	if (!output_stream.IsOk())
+	{
+		wxMessageDialog errorMessage(this, "Failed to stream");
+		errorMessage.ShowModal();
+		return;
+	}
+
+	if (!nsyshid::g_dimensionstoypad.create_figure(createFileDialog.GetPath().ToStdString(), mini_id))
+	{
+		wxMessageDialog errorMessage(this, "Failed to write");
+		errorMessage.ShowModal();
+		return;
+	}
+
+	LoadMinifigPath(createFileDialog.GetPath(), pad, index);
 }
 
 void EmulatedUSBDeviceFrame::LoadFigure(uint8 slot)
