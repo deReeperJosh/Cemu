@@ -34,94 +34,6 @@
 #include "resource/embedded/resources.h"
 
 
-const std::map<const uint16, const std::string> list_minis = {
-	{1, "Batman"},
-	{2, "Gandalf"},
-	{3, "Wyldstyle"},
-	{4, "Aquaman"},
-	{5, "Bad Cop"},
-	{6, "Bane"},
-	{7, "Bart Simpson"},
-	{8, "Benny"},
-	{9, "Chell"},
-	{10, "Cole"},
-	{11, "Cragger"},
-	{12, "Cyborg"},
-	{13, "Cyberman"},
-	{14, "Doc Brown"},
-	{15, "The Doctor"},
-	{16, "Emmet"},
-	{17, "Eris"},
-	{18, "Gimli"},
-	{19, "Gollum"},
-	{20, "Harley Quinn"},
-	{21, "Homer Simpson"},
-	{22, "Jay"},
-	{23, "Joker"},
-	{24, "Kai"},
-	{25, "ACU Trooper"},
-	{26, "Gamer Kid"},
-	{27, "Krusty the Clown"},
-	{28, "Laval"},
-	{29, "Legolas"},
-	{30, "Lloyd"},
-	{31, "Marty McFly"},
-	{32, "Nya"},
-	{33, "Owen Grady"},
-	{34, "Peter Venkman"},
-	{35, "Slimer"},
-	{36, "Scooby-Doo"},
-	{37, "Sensei Wu"},
-	{38, "Shaggy"},
-	{39, "Stay Puft"},
-	{40, "Superman"},
-	{41, "Unikitty"},
-	{42, "Wicked Witch of the West"},
-	{43, "Wonder Woman"},
-	{44, "Zane"},
-	{45, "Green Arrow"},
-	{46, "Supergirl"},
-	{47, "Abby Yates"},
-	{48, "Finn the Human"},
-	{49, "Ethan Hunt"},
-	{50, "Lumpy Space Princess"},
-	{51, "Jake the Dog"},
-	{52, "Harry Potter"},
-	{53, "Lord Voldemort"},
-	{54, "Michael Knight"},
-	{55, "B.A. Baracus"},
-	{56, "Newt Scamander"},
-	{57, "Sonic the Hedgehog"},
-	{58, "Future Update (unreleased)"},
-	{59, "Gizmo"},
-	{60, "Stripe"},
-	{61, "E.T."},
-	{62, "Tina Goldstein"},
-	{63, "Marceline the Vampire Queen"},
-	{64, "Batgirl"},
-	{65, "Robin"},
-	{66, "Sloth"},
-	{67, "Hermione Granger"},
-	{68, "Chase McCain"},
-	{69, "Excalibur Batman"},
-	{70, "Raven"},
-	{71, "Beast Boy"},
-	{72, "Betelgeuse"},
-	{73, "Lord Vortech (unreleased)"},
-	{74, "Blossom"},
-	{75, "Bubbles"},
-	{76, "Buttercup"},
-	{77, "Starfire"},
-	{78, "World 15 (unreleased)"},
-	{79, "World 16 (unreleased)"},
-	{80, "World 17 (unreleased)"},
-	{81, "World 18 (unreleased)"},
-	{82, "World 19 (unreleased)"},
-	{83, "World 20 (unreleased)"},
-	{768, "Unknown 768"},
-	{769, "Supergirl Red Lantern"},
-	{770, "Unknown 770"}};
-
 EmulatedUSBDeviceFrame::EmulatedUSBDeviceFrame(wxWindow* parent)
 	: wxFrame(parent, wxID_ANY, _("Emulated USB Devices"), wxDefaultPosition,
 			  wxDefaultSize, wxDEFAULT_FRAME_STYLE | wxTAB_TRAVERSAL)
@@ -328,7 +240,7 @@ wxBoxSizer* EmulatedUSBDeviceFrame::AddDimensionPanel(uint8 pad, uint8 index, wx
 	auto* combo_row = new wxBoxSizer(wxHORIZONTAL);
 	m_dimension_slots[index - 1] = new wxComboBox(box, wxID_ANY);
 	m_dimension_slots[index - 1]->Append("None");
-	for (auto it = list_minis.begin(); it != list_minis.end(); it++)
+	for (auto it = nsyshid::list_minis.begin(); it != nsyshid::list_minis.end(); it++)
 	{
 		m_dimension_slots[index - 1]->Append(it->second);
 	}
@@ -346,8 +258,8 @@ wxBoxSizer* EmulatedUSBDeviceFrame::AddDimensionPanel(uint8 pad, uint8 index, wx
 				return;
 			}
 			uint16 current_id = nsyshid::g_dimensionstoypad.get_figure(index);
-			auto it = list_minis.find(current_id);
-			if (it == list_minis.end() || m_dimension_slots[index - 1]->FindString(it->second) != selection)
+			auto it = nsyshid::list_minis.find(current_id);
+			if (it == nsyshid::list_minis.end() || m_dimension_slots[index - 1]->FindString(it->second) != selection)
 			{
 				cemuLog_log(LogType::Force, "Creating");
 				CreateMinifig(pad, index);
@@ -675,7 +587,7 @@ void EmulatedUSBDeviceFrame::LoadMinifigPath(wxString path_name, uint8 pad, uint
 	ClearMinifig(pad, index);
 
 	uint16 id = nsyshid::g_dimensionstoypad.load_figure(file_data, std::move(dim_file), pad, index);
-	m_dimension_slots[index - 1]->SetSelection(m_dimension_slots[index - 1]->FindString(list_minis.at(id)));
+	m_dimension_slots[index - 1]->SetSelection(m_dimension_slots[index - 1]->FindString(nsyshid::list_minis.at(id)));
 }
 void EmulatedUSBDeviceFrame::ClearMinifig(uint8 pad, uint8 index)
 {
@@ -685,7 +597,7 @@ void EmulatedUSBDeviceFrame::ClearMinifig(uint8 pad, uint8 index)
 void EmulatedUSBDeviceFrame::CreateMinifig(uint8 pad, uint8 index)
 {
 	uint16 mini_id = 0;
-	for (auto it = list_minis.begin(); it != list_minis.end(); it++)
+	for (auto it = nsyshid::list_minis.begin(); it != nsyshid::list_minis.end(); it++)
 	{
 		if (it->second == m_dimension_slots[index - 1]->GetStringSelection())
 		{

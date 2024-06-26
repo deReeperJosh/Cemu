@@ -34,6 +34,8 @@ namespace nsyshid
 		bool m_IsOpened;
 	};
 
+	extern const std::map<const uint16, const std::string> list_minis;
+
 	class DimensionsUSB {
 	  public:
 		struct DimensionsMini final
