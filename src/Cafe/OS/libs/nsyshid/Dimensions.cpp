@@ -3,6 +3,8 @@
 #include "nsyshid.h"
 #include "Backend.h"
 
+#include "Common/FileStream.h"
+
 #include <random>
 
 namespace nsyshid
@@ -380,7 +382,7 @@ namespace nsyshid
 		return 0;
 	}
 
-	uint16 DimensionsUSB::load_figure(const std::array<uint8, 0x2D * 0x04>& buf, std::FILE* file, uint8 pad, uint8 index)
+	uint16 DimensionsUSB::load_figure(const std::array<uint8, 0x2D * 0x04>& buf, std::unique_ptr<FileStream> file, uint8 pad, uint8 index)
 	{
 		std::lock_guard lock(m_dimensions_mutex);
 		uint16 id = uint16(buf[0x0E]) << 8 | uint16(buf[0x0F]);
@@ -407,7 +409,7 @@ namespace nsyshid
 			return false;
 		}
 		figure.Save();
-		std::fclose(figure.dim_file);
+		figure.dim_file.reset();
 		figure.index = 255;
 		figure.pad = 255;
 		figure.id = 0;
@@ -581,6 +583,25 @@ namespace nsyshid
 		reply_buf[20] = generate_checksum(reply_buf, 20);
 	}
 
+	void DimensionsUSB::write_block(uint8 index, uint8 page, const uint8* to_write_buf,
+									std::array<uint8, 32>& reply_buf, uint8 sequence)
+	{
+		std::lock_guard lock(m_dimensions_mutex);
+
+		DimensionsMini& figure = get_figure_by_index(index);
+
+		reply_buf[0] = 0x55;
+		reply_buf[1] = 0x12;
+		reply_buf[2] = sequence;
+		reply_buf[3] = 0x00;
+		if (figure.id != 0 && (page * 4) < 0x2D)
+		{
+			memcpy(figure.data.data() + (page * 4 * 16), to_write_buf, 4);
+			figure.Save();
+		}
+		reply_buf[4] = generate_checksum(reply_buf, 4);
+	}
+
 	void DimensionsUSB::get_model(uint8* buf, uint8 sequence,
 								  std::array<uint8, 32>& reply_buf)
 	{
@@ -632,11 +653,6 @@ namespace nsyshid
 		if (!dim_file)
 			return;
 
-#if BOOST_OS_WINDOWS
-		_fseeki64(dim_file, 0, 0);
-#else
-		fseeko(dim_file, 0, 0);
-#endif
-		std::fwrite(&data[0], sizeof(data[0]), data.size(), dim_file);
+		dim_file->writeData(data.data(), data.size());
 	}
 } // namespace nsyshid

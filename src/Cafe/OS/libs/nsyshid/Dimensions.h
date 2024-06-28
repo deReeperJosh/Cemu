@@ -3,6 +3,8 @@
 #include "nsyshid.h"
 #include "Backend.h"
 
+#include "Common/FileStream.h"
+
 namespace nsyshid
 {
 	class DimensionsToypadDevice final : public Device {
@@ -40,7 +42,7 @@ namespace nsyshid
 	  public:
 		struct DimensionsMini final
 		{
-			std::FILE* dim_file;
+			std::unique_ptr<FileStream> dim_file;
 			std::array<uint8, 0x2D * 0x04> data{};
 			uint8 index = 255;
 			uint8 pad = 255;
@@ -58,12 +60,14 @@ namespace nsyshid
 									std::array<uint8, 32>& reply_buf);
 		void query_block(uint8 index, uint8 page, std::array<uint8, 32>& reply_buf,
 						 uint8 sequence);
+		void write_block(uint8 index, uint8 page, const uint8* to_write_buf, std::array<uint8, 32>& reply_buf,
+						 uint8 sequence);
 		void get_model(uint8* buf, uint8 sequence,
 					   std::array<uint8, 32>& reply_buf);
 
 		uint16 get_figure(uint8 index);
 		bool remove_figure(uint8 pad, uint8 index);
-		uint16 load_figure(const std::array<uint8, 0x2D * 0x04>& buf, std::FILE* file, uint8 pad, uint8 index);
+		uint16 load_figure(const std::array<uint8, 0x2D * 0x04>& buf, std::unique_ptr<FileStream> file, uint8 pad, uint8 index);
 		bool create_figure(const std::string& file_path, uint16 id);
 
 	  protected:

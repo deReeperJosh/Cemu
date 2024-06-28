@@ -169,7 +169,7 @@ wxPanel* EmulatedUSBDeviceFrame::AddDimensionsPage(wxNotebook* notebook)
 	return panel;
 }
 
-wxBoxSizer* EmulatedUSBDeviceFrame::AddSkylanderRow(uint8 row_number,
+wxBoxSizer* EmulatedUSBDeviceFrame::AddSkylanderRow(uint8 rowNumber,
 													wxStaticBox* box)
 {
 	auto* row = new wxBoxSizer(wxHORIZONTAL);
@@ -567,7 +567,7 @@ void EmulatedUSBDeviceFrame::LoadMinifig(uint8 pad, uint8 index)
 }
 void EmulatedUSBDeviceFrame::LoadMinifigPath(wxString path_name, uint8 pad, uint8 index)
 {
-	FILE* dim_file = std::fopen(path_name.c_str(), "r+b");
+	std::unique_ptr<FileStream> dim_file(FileStream::openFile2(_utf8ToPath(path_name.utf8_string()), true));
 	if (!dim_file)
 	{
 		wxMessageDialog errorMessage(this, "Failed to open minifig file");
@@ -577,7 +577,7 @@ void EmulatedUSBDeviceFrame::LoadMinifigPath(wxString path_name, uint8 pad, uint
 
 	std::array<uint8, 0x2D * 0x04> file_data;
 
-	if (file_data.size() != std::fread(file_data.data(), sizeof file_data[0], file_data.size(), dim_file))
+	if (dim_file->readData(file_data.data(), file_data.size()) != file_data.size())
 	{
 		wxMessageDialog errorMessage(this, "Failed to read minifig file data");
 		errorMessage.ShowModal();
