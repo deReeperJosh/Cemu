@@ -332,6 +332,12 @@ namespace nsyshid
 			g_dimensionstoypad.query_block(buf[4], buf[5], q_result, sequence);
 			break;
 		}
+		// Write
+		case 0xD3:
+		{
+			g_dimensionstoypad.write_block(buf[4], buf[5], &buf[6], q_result, sequence);
+			break;
+		}
 		// Model
 		case 0xD4:
 		{
@@ -350,8 +356,6 @@ namespace nsyshid
 		case 0xC8:
 		// Tag List
 		case 0xD0:
-		// Write
-		case 0xD3:
 		// PWD
 		case 0xE1:
 		// Active
@@ -597,7 +601,7 @@ namespace nsyshid
 		reply_buf[3] = 0x00;
 		if (figure.id != 0 && (page * 4) < 0x2D)
 		{
-			memcpy(figure.data.data() + (page * 4 * 16), to_write_buf, 4);
+			memcpy(figure.data.data() + (page * 4), to_write_buf, 4);
 			figure.Save();
 		}
 		reply_buf[4] = generate_checksum(reply_buf, 4);
