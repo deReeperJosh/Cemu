@@ -610,14 +610,6 @@ void EmulatedUSBDeviceFrame::CreateMinifig(uint8 pad, uint8 index)
 	if (createFileDialog.ShowModal() == wxID_CANCEL)
 		return;
 
-	wxFileOutputStream output_stream(createFileDialog.GetPath());
-	if (!output_stream.IsOk())
-	{
-		wxMessageDialog errorMessage(this, "Failed to stream");
-		errorMessage.ShowModal();
-		return;
-	}
-
 	if (!nsyshid::g_dimensionstoypad.create_figure(createFileDialog.GetPath().ToStdString(), mini_id))
 	{
 		wxMessageDialog errorMessage(this, "Failed to write");

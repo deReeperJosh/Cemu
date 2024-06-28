@@ -68,7 +68,7 @@ namespace nsyshid
 		uint16 get_figure(uint8 index);
 		bool remove_figure(uint8 pad, uint8 index);
 		uint16 load_figure(const std::array<uint8, 0x2D * 0x04>& buf, std::unique_ptr<FileStream> file, uint8 pad, uint8 index);
-		bool create_figure(const std::string& file_path, uint16 id);
+		bool create_figure(fs::path pathName, uint16 id);
 
 	  protected:
 		std::mutex m_dimensions_mutex;

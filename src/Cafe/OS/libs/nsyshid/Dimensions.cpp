@@ -420,9 +420,9 @@ namespace nsyshid
 		return true;
 	}
 
-	bool DimensionsUSB::create_figure(const std::string& file_path, uint16 id)
+	bool DimensionsUSB::create_figure(fs::path pathName, uint16 id)
 	{
-		FILE* dim_file = std::fopen(file_path.c_str(), "w+b");
+		FileStream* dim_file(FileStream::createFile2(pathName));
 		if (!dim_file)
 		{
 			return false;
@@ -431,11 +431,12 @@ namespace nsyshid
 		random_uid(file_data.data());
 		file_data[0x0E] = uint8((id >> 8) & 0xFF);
 		file_data[0x0F] = uint8(id & 0xFF);
-		if (file_data.size() != std::fwrite(file_data.data(), sizeof file_data[0], file_data.size(), dim_file))
+		if (file_data.size() != dim_file->writeData(file_data.data(), file_data.size()))
 		{
+			delete dim_file;
 			return false;
 		}
-		std::fclose(dim_file);
+		delete dim_file;
 		cemuLog_log(LogType::Force, "File data: \n{}", HexDump(file_data.data(), file_data.size()));
 		return true;
 	}
