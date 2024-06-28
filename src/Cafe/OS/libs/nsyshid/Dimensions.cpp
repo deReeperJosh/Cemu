@@ -653,6 +653,7 @@ namespace nsyshid
 		if (!dim_file)
 			return;
 
+		dim_file->SetPosition(0);
 		dim_file->writeData(data.data(), data.size());
 	}
 } // namespace nsyshid
