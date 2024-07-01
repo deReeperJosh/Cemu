@@ -596,7 +596,7 @@ namespace nsyshid
 		DimensionsMini& figure = get_figure_by_index(index);
 
 		reply_buf[0] = 0x55;
-		reply_buf[1] = 0x12;
+		reply_buf[1] = 0x02;
 		reply_buf[2] = sequence;
 		reply_buf[3] = 0x00;
 		if (figure.id != 0 && (page * 4) < 0x2D)
