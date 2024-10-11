@@ -380,7 +380,10 @@ namespace nsyshid
 
 	Device::WriteResult InfinityBaseDevice::Write(WriteMessage* message)
 	{
-		g_infinitybase.SendCommand(message->data, message->length);
+		if (message->length != 32)
+			return Device::WriteResult::Error;
+
+		g_infinitybase.SendCommand(std::span<const uint8, 32>{message->data, 32});
 		message->bytesWritten = message->length;
 		return Device::WriteResult::Success;
 	}
@@ -492,7 +495,7 @@ namespace nsyshid
 		return response;
 	}
 
-	void InfinityUSB::SendCommand(uint8* buf, sint32 originalLength)
+	void InfinityUSB::SendCommand(std::span<const uint8, 32> buf)
 	{
 		const uint8 command = buf[2];
 		const uint8 sequence = buf[3];
@@ -511,7 +514,7 @@ namespace nsyshid
 		case 0x81:
 		{
 			// Initiate Challenge
-			g_infinitybase.DescrambleAndSeed(buf, sequence, q_result);
+			g_infinitybase.DescrambleAndSeed(std::span<const uint8, 8>{buf.begin() + 4, 8}, sequence, q_result);
 			break;
 		}
 		case 0x83:
@@ -545,7 +548,7 @@ namespace nsyshid
 		case 0xA3:
 		{
 			// Write block to figure
-			g_infinitybase.WriteBlock(buf[4], buf[5], &buf[7], q_result, sequence);
+			g_infinitybase.WriteBlock(buf[4], buf[5], std::span<const uint8, 16>{buf.begin() + 7, 16}, q_result, sequence);
 			break;
 		}
 		case 0xB4:
@@ -588,13 +591,10 @@ namespace nsyshid
 		replyBuf[3] = GenerateChecksum(replyBuf, 3);
 	}
 
-	void InfinityUSB::DescrambleAndSeed(uint8* buf, uint8 sequence,
+	void InfinityUSB::DescrambleAndSeed(std::span<const uint8, 8> buf, uint8 sequence,
 										std::array<uint8, 32>& replyBuf)
 	{
-		uint64 value = uint64(buf[4]) << 56 | uint64(buf[5]) << 48 |
-					   uint64(buf[6]) << 40 | uint64(buf[7]) << 32 |
-					   uint64(buf[8]) << 24 | uint64(buf[9]) << 16 |
-					   uint64(buf[10]) << 8 | uint64(buf[11]);
+		uint64 value = (uint64be&)buf[0];
 		uint32 seed = Descramble(value);
 		GenerateSeed(seed);
 		GetBlankResponse(sequence, replyBuf);
@@ -752,7 +752,7 @@ namespace nsyshid
 	}
 
 	void InfinityUSB::WriteBlock(uint8 fig_num, uint8 block,
-								 const uint8* to_write_buf,
+								 std::span<const uint8, 16> to_write_buf,
 								 std::array<uint8, 32>& replyBuf,
 								 uint8 sequence)
 	{
@@ -767,7 +767,7 @@ namespace nsyshid
 		const uint8 file_block = (block == 0) ? 1 : (block * 4);
 		if (figure.present && file_block < 20)
 		{
-			memcpy(figure.data.data() + (file_block * 16), to_write_buf, 16);
+			memcpy(figure.data.data() + (file_block * 16), to_write_buf.data(), 16);
 			figure.Save();
 		}
 		replyBuf[4] = GenerateChecksum(replyBuf, 4);

@@ -53,17 +53,17 @@ namespace nsyshid
 			void Save();
 		};
 
-		void SendCommand(uint8* buf, sint32 originalLength);
+		void SendCommand(std::span<const uint8, 32> buf);
 		std::array<uint8, 32> GetStatus();
 
 		void GetBlankResponse(uint8 sequence, std::array<uint8, 32>& replyBuf);
-		void DescrambleAndSeed(uint8* buf, uint8 sequence,
+		void DescrambleAndSeed(std::span<const uint8, 8> buf, uint8 sequence,
 							   std::array<uint8, 32>& replyBuf);
 		void GetNextAndScramble(uint8 sequence, std::array<uint8, 32>& replyBuf);
 		void GetPresentFigures(uint8 sequence, std::array<uint8, 32>& replyBuf);
 		void QueryBlock(uint8 figNum, uint8 block, std::array<uint8, 32>& replyBuf,
 						uint8 sequence);
-		void WriteBlock(uint8 figNum, uint8 block, const uint8* toWriteBuf,
+		void WriteBlock(uint8 figNum, uint8 block, std::span<const uint8, 16> toWriteBuf,
 						std::array<uint8, 32>& replyBuf, uint8 sequence);
 		void GetFigureIdentifier(uint8 figNum, uint8 sequence,
 								 std::array<uint8, 32>& replyBuf);
