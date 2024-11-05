@@ -474,6 +474,8 @@ add_library(CemuCafe
   OS/libs/nsyshid/Dimensions.h
   OS/libs/nsyshid/Infinity.cpp
   OS/libs/nsyshid/Infinity.h
+  OS/libs/nsyshid/KamenRider.cpp
+  OS/libs/nsyshid/KamenRider.h
   OS/libs/nsyshid/Skylander.cpp
   OS/libs/nsyshid/Skylander.h
   OS/libs/nsyskbd/nsyskbd.cpp
