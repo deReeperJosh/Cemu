@@ -47,8 +47,8 @@ namespace nsyshid::backend::emulated
 		{
 			cemuLog_logDebug(LogType::Force, "Attaching Emulated Ridegate");
 			// Add Kamen Ridegate
-			// auto device = std::make_shared<DimensionsToypadDevice>();
-			// AttachDevice(device);
+			auto device = std::make_shared<KamenRiderGateDevice>();
+			AttachDevice(device);
 		}
 	}
 } // namespace nsyshid::backend::emulated
