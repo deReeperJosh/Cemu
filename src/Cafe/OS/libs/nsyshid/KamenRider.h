@@ -7,7 +7,8 @@
 
 namespace nsyshid
 {
-    class KamenRiderGateDevice final : public Device {
+	class KamenRiderGateDevice final : public Device
+	{
 	  public:
 		KamenRiderGateDevice();
 		~KamenRiderGateDevice() = default;
@@ -34,5 +35,23 @@ namespace nsyshid
 
 	  private:
 		bool m_IsOpened;
-    };
-}
+	};
+
+	class RideGateUSB
+	{
+	  public:
+		void SendCommand(std::span<const uint8> buf);
+		std::array<uint8, 64> GetStatus();
+
+	  protected:
+		std::mutex m_kamenRiderMutex;
+
+	  private:
+		uint8 GenerateChecksum(const std::array<uint8, 64>& data,
+							   int numOfBytes) const;
+
+		std::queue<std::array<uint8, 64>> m_figureAddedRemovedResponses;
+		std::queue<std::array<uint8, 64>> m_queries;
+	};
+	extern RideGateUSB g_kamenridegate;
+} // namespace nsyshid

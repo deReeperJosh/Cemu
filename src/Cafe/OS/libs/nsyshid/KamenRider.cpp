@@ -9,6 +9,8 @@
 
 namespace nsyshid
 {
+	RideGateUSB g_kamenridegate;
+
 	KamenRiderGateDevice::KamenRiderGateDevice()
 		: Device(0x0E6F, 0x200A, 1, 2, 0)
 	{
@@ -72,6 +74,7 @@ namespace nsyshid
 
 	Device::ReadResult KamenRiderGateDevice::Read(ReadMessage* message)
 	{
+		memcpy(message->data, g_kamenridegate.GetStatus().data(), message->length);
 		message->bytesRead = message->length;
 		return Device::ReadResult::Success;
 	}
@@ -79,6 +82,8 @@ namespace nsyshid
 	Device::WriteResult KamenRiderGateDevice::Write(WriteMessage* message)
 	{
 		cemuLog_log(LogType::Force, "Ride gate write: \n{}", HexDump(message->data, message->length));
+		const uint8 length = message->length;
+		g_kamenridegate.SendCommand(std::span<const uint8>{message->data, length});
 		message->bytesWritten = message->length;
 		return Device::WriteResult::Success;
 	}
@@ -158,5 +163,77 @@ namespace nsyshid
 	{
 		cemuLog_log(LogType::Force, "Ride gate write: \n{}", HexDump(message->originalData, message->originalLength));
 		return true;
+	}
+
+	std::array<uint8, 64> RideGateUSB::GetStatus()
+	{
+		std::array<uint8, 64> response = {};
+
+		bool responded = false;
+		do
+		{
+			if (!m_queries.empty())
+			{
+				response = m_queries.front();
+				m_queries.pop();
+				responded = true;
+			}
+			else if (!m_figureAddedRemovedResponses.empty())
+			{
+				std::lock_guard lock(m_kamenRiderMutex);
+				response = m_figureAddedRemovedResponses.front();
+				m_figureAddedRemovedResponses.pop();
+				responded = true;
+			}
+			else
+			{
+				std::this_thread::sleep_for(std::chrono::milliseconds(100));
+			}
+		}
+		while (responded == false);
+		return response;
+	}
+
+	void RideGateUSB::SendCommand(std::span<const uint8> buf)
+	{
+		const uint8 command = buf[2];
+		const uint8 sequence = buf[3];
+
+		std::array<uint8, 64> q_result{};
+
+		switch (command)
+		{
+		case 0xB0: // Wake
+		{
+			q_result = {0x55, 0x1a, 0xb0, sequence, 0x00, 0x07, 0x00, 0x03, 0x02,
+						0x09, 0x20, 0x03, 0xf5, 0x00, 0x19, 0x42, 0x52, 0xb7,
+						0xb9, 0xa1, 0xae, 0x2b, 0x88, 0x42, 0x05, 0xfe, 0xe0, 0x1c, 0xac};
+			break;
+		}
+		case 0xC0:
+		case 0xC3:
+		case 0xD0:
+		{
+			q_result = {0x55, 0x02, command, sequence};
+			q_result[4] = GenerateChecksum(q_result, 4);
+			break;
+		}
+		default:
+			cemuLog_log(LogType::Force, "Unknown Kamen Rider Function: {:x}", command);
+			break;
+		}
+
+		m_queries.push(q_result);
+	}
+
+	uint8 RideGateUSB::GenerateChecksum(const std::array<uint8, 64>& data,
+										int numOfBytes) const
+	{
+		int checksum = 0;
+		for (int i = 0; i < numOfBytes; i++)
+		{
+			checksum += data[i];
+		}
+		return (checksum & 0xFF);
 	}
 } // namespace nsyshid
