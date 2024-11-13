@@ -211,11 +211,21 @@ namespace nsyshid
 			break;
 		}
 		case 0xC0:
-		case 0xC3:
-		case 0xD0:
+		case 0xC3: // Color Commands
 		{
 			q_result = {0x55, 0x02, command, sequence};
 			q_result[4] = GenerateChecksum(q_result, 4);
+			break;
+		}
+		case 0xD0: // Tag List
+		{
+			// Return list of figure UIDs, separated by an 09
+			g_kamenridegate.GetListTags(q_result, command, sequence);
+			break;
+		}
+		case 0xD2: // Read
+		{
+			// Read 16 bytes from figure with UID buf[4] - buf[10]
 			break;
 		}
 		default:
@@ -224,6 +234,47 @@ namespace nsyshid
 		}
 
 		m_queries.push(q_result);
+	}
+
+	void RideGateUSB::GetListTags(std::array<uint8, 64>& replyBuf, uint8 command, uint8 sequence)
+	{
+		replyBuf = {0x55, 0x02, command, sequence};
+		uint8 index = 4;
+		for (auto& figure : m_figures)
+		{
+			if (figure.present)
+			{
+				replyBuf[index] = 0x09;
+				memcpy(&replyBuf[index + 1], figure.data.data(), 7);
+				index += 8;
+				replyBuf[1] += 8;
+			}
+		}
+		replyBuf[index] = GenerateChecksum(replyBuf, index);
+	}
+
+	void RideGateUSB::QueryBlock(std::array<uint8, 64>& replyBuf, uint8 command, uint8 sequence, const std::array<uint8, 7> uid, uint8 block, uint8 line)
+	{
+		replyBuf = {0x55, 0x13, command, sequence, 0x00};
+
+		auto figure = GetFigureByUID(uid);
+		if (figure)
+		{
+			
+		}
+		replyBuf[21] = GenerateChecksum(replyBuf, 21);
+	}
+
+	std::optional<RideGateUSB::RiderFigure&> RideGateUSB::GetFigureByUID(const std::array<uint8, 7> uid)
+	{
+		for (auto& figure : m_figures)
+		{
+			if (figure.uid == uid)
+			{
+				return figure;
+			}
+		}
+		return std::nullopt;
 	}
 
 	uint8 RideGateUSB::GenerateChecksum(const std::array<uint8, 64>& data,
