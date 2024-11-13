@@ -348,6 +348,7 @@ void CemuConfig::Load(XMLConfigParser& parser)
 	emulated_usb_devices.emulate_skylander_portal = usbdevices.get("EmulateSkylanderPortal", emulated_usb_devices.emulate_skylander_portal);
 	emulated_usb_devices.emulate_infinity_base = usbdevices.get("EmulateInfinityBase", emulated_usb_devices.emulate_infinity_base);
 	emulated_usb_devices.emulate_dimensions_toypad = usbdevices.get("EmulateDimensionsToypad", emulated_usb_devices.emulate_dimensions_toypad);
+	emulated_usb_devices.emulate_kamen_ridegate = usbdevices.get("EmulateKamenRidegate", emulated_usb_devices.emulate_kamen_ridegate);
 }
 
 void CemuConfig::Save(XMLConfigParser& parser)
@@ -549,6 +550,7 @@ void CemuConfig::Save(XMLConfigParser& parser)
 	usbdevices.set("EmulateSkylanderPortal", emulated_usb_devices.emulate_skylander_portal.GetValue());
 	usbdevices.set("EmulateInfinityBase", emulated_usb_devices.emulate_infinity_base.GetValue());
 	usbdevices.set("EmulateDimensionsToypad", emulated_usb_devices.emulate_dimensions_toypad.GetValue());
+	usbdevices.set("EmulateKamenRidegate", emulated_usb_devices.emulate_kamen_ridegate.GetValue());
 }
 
 GameEntry* CemuConfig::GetGameEntryByTitleId(uint64 titleId)
