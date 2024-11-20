@@ -8,7 +8,6 @@
 #include "util/helpers/helpers.h"
 
 #include "Cafe/OS/libs/nsyshid/nsyshid.h"
-#include "Cafe/OS/libs/nsyshid/Dimensions.h"
 
 #include "Common/FileStream.h"
 
@@ -47,6 +46,7 @@ EmulatedUSBDeviceFrame::EmulatedUSBDeviceFrame(wxWindow* parent)
 	notebook->AddPage(AddSkylanderPage(notebook), _("Skylanders Portal"));
 	notebook->AddPage(AddInfinityPage(notebook), _("Infinity Base"));
 	notebook->AddPage(AddDimensionsPage(notebook), _("Dimensions Toypad"));
+	notebook->AddPage(AddSummonridePage(notebook), _("Summonride Ride Gate"));
 
 	sizer->Add(notebook, 1, wxEXPAND | wxALL, 2);
 
@@ -168,6 +168,36 @@ wxPanel* EmulatedUSBDeviceFrame::AddDimensionsPage(wxNotebook* notebook)
 	return panel;
 }
 
+wxPanel* EmulatedUSBDeviceFrame::AddSummonridePage(wxNotebook* notebook)
+{
+	auto* panel = new wxPanel(notebook);
+	auto* panelSizer = new wxBoxSizer(wxVERTICAL);
+	auto* box = new wxStaticBox(panel, wxID_ANY, _("Kamen Rider Manager"));
+	auto* boxSizer = new wxStaticBoxSizer(box, wxVERTICAL);
+
+	auto* row = new wxBoxSizer(wxHORIZONTAL);
+
+	m_emulateRidegate =
+		new wxCheckBox(box, wxID_ANY, _("Emulate Summonride Ride Gate"));
+	m_emulateRidegate->SetValue(
+		GetConfig().emulated_usb_devices.emulate_kamen_ridegate);
+	m_emulateRidegate->Bind(wxEVT_CHECKBOX, [this](wxCommandEvent&) {
+		GetConfig().emulated_usb_devices.emulate_kamen_ridegate =
+			m_emulateRidegate->IsChecked();
+		g_config.Save();
+	});
+	row->Add(m_emulateRidegate, 1, wxEXPAND | wxALL, 2);
+	boxSizer->Add(row, 1, wxEXPAND | wxALL, 2);
+	for (int i = 0; i < 7; i++)
+	{
+		boxSizer->Add(AddSummonrideRow(i, box), 1, wxEXPAND | wxALL, 2);
+	}
+	panelSizer->Add(boxSizer, 1, wxEXPAND | wxALL, 2);
+	panel->SetSizerAndFit(panelSizer);
+
+	return panel;
+}
+
 wxBoxSizer* EmulatedUSBDeviceFrame::AddSkylanderRow(uint8 rowNumber, wxStaticBox* box)
 {
 	auto* row = new wxBoxSizer(wxHORIZONTAL);
@@ -267,6 +297,39 @@ wxBoxSizer* EmulatedUSBDeviceFrame::AddDimensionPanel(uint8 pad, uint8 index, wx
 	panel->Add(button_row, 1, wxEXPAND | wxALL, 2);
 
 	return panel;
+}
+
+wxBoxSizer* EmulatedUSBDeviceFrame::AddSummonrideRow(uint8 rowNumber, wxStaticBox* box)
+{
+	auto* row = new wxBoxSizer(wxHORIZONTAL);
+
+	row->Add(new wxStaticText(box, wxID_ANY,
+							  fmt::format("{} {}", _("Kamen Rider").ToStdString(),
+										  (rowNumber + 1))),
+			 1, wxEXPAND | wxALL, 2);
+	m_summonrideSlots[rowNumber] =
+		new wxTextCtrl(box, wxID_ANY, _("None"), wxDefaultPosition, wxDefaultSize,
+					   wxTE_READONLY);
+	m_summonrideSlots[rowNumber]->SetMinSize(wxSize(150, -1));
+	m_summonrideSlots[rowNumber]->Disable();
+	row->Add(m_summonrideSlots[rowNumber], 1, wxEXPAND | wxALL, 2);
+	auto* loadButton = new wxButton(box, wxID_ANY, _("Load"));
+	loadButton->Bind(wxEVT_BUTTON, [rowNumber, this](wxCommandEvent&) {
+		LoadKamenRider(rowNumber);
+	});
+	auto* createButton = new wxButton(box, wxID_ANY, _("Create"));
+	createButton->Bind(wxEVT_BUTTON, [rowNumber, this](wxCommandEvent&) {
+		CreateKamenRider(rowNumber);
+	});
+	auto* clearButton = new wxButton(box, wxID_ANY, _("Clear"));
+	clearButton->Bind(wxEVT_BUTTON, [rowNumber, this](wxCommandEvent&) {
+		ClearKamenRider(rowNumber);
+	});
+	row->Add(loadButton, 1, wxEXPAND | wxALL, 2);
+	row->Add(createButton, 1, wxEXPAND | wxALL, 2);
+	row->Add(clearButton, 1, wxEXPAND | wxALL, 2);
+
+	return row;
 }
 
 void EmulatedUSBDeviceFrame::LoadSkylander(uint8 slot)
@@ -833,4 +896,168 @@ uint8 MoveDimensionFigureDialog::GetNewIndex() const
 std::array<std::optional<uint32>, 7> EmulatedUSBDeviceFrame::GetCurrentMinifigs()
 {
 	return m_dimSlots;
+}
+
+void EmulatedUSBDeviceFrame::LoadKamenRider(uint8 slot)
+{
+	wxFileDialog openFileDialog(this, _("Open Kamen Rider dump"), "", "",
+								"Kamen Rider files (*.bin;*.dump;*.dmp)|*.bin;*.dump;*.dmp",
+								wxFD_OPEN | wxFD_FILE_MUST_EXIST);
+	if (openFileDialog.ShowModal() != wxID_OK || openFileDialog.GetPath().empty())
+		return;
+
+	LoadKamenRiderPath(slot, openFileDialog.GetPath());
+}
+
+void EmulatedUSBDeviceFrame::LoadKamenRiderPath(uint8 slot, wxString path)
+{
+	std::unique_ptr<FileStream> kamenFile(FileStream::openFile2(_utf8ToPath(path.utf8_string()), true));
+	if (!kamenFile)
+	{
+		wxMessageDialog open_error(this, "Error Opening File: " + path.c_str());
+		open_error.ShowModal();
+		return;
+	}
+
+	std::array<uint8, 0x10 * 0x14> fileData;
+	if (kamenFile->readData(fileData.data(), fileData.size()) != fileData.size())
+	{
+		wxMessageDialog open_error(this, "Failed to read file! File was too small");
+		open_error.ShowModal();
+		return;
+	}
+	ClearKamenRider(slot);
+
+	uint8 type = fileData[25];
+	uint8 id = fileData[27];
+
+	uint8 portalSlot = nsyshid::g_kamenridegate.LoadFigure(fileData,
+														   std::move(kamenFile));
+	m_kamenSlots[slot] = std::tuple(portalSlot, type, id);
+	UpdateSummonrideEdits();
+}
+
+void EmulatedUSBDeviceFrame::CreateKamenRider(uint8 slot)
+{
+	CreateKamenRiderDialog create_dlg(this, slot);
+	create_dlg.ShowModal();
+	if (create_dlg.GetReturnCode() == 1)
+	{
+		LoadKamenRiderPath(slot, create_dlg.GetFilePath());
+	}
+}
+
+void EmulatedUSBDeviceFrame::ClearKamenRider(uint8 slot)
+{
+	if (auto slotInfos = m_kamenSlots[slot])
+	{
+		auto [curSlot, type, id] = slotInfos.value();
+		nsyshid::g_kamenridegate.RemoveFigure(curSlot);
+		m_kamenSlots[slot] = std::nullopt;
+		UpdateSummonrideEdits();
+	}
+}
+
+CreateKamenRiderDialog::CreateKamenRiderDialog(wxWindow* parent, uint8 slot)
+	: wxDialog(parent, wxID_ANY, _("Kamen Rider Creator"), wxDefaultPosition, wxSize(500, 150))
+{
+	auto* sizer = new wxBoxSizer(wxVERTICAL);
+
+	auto* typeIdRow = new wxBoxSizer(wxHORIZONTAL);
+
+	wxIntegerValidator<uint8> validator;
+
+	auto* labelType = new wxStaticText(this, wxID_ANY, "Type:");
+	auto* labelId = new wxStaticText(this, wxID_ANY, "ID:");
+	auto* typeCombo = new wxComboBox(this, wxID_ANY);
+	typeCombo->Append("---Select---", reinterpret_cast<void*>(0xFF));
+	typeCombo->Append("Grass", reinterpret_cast<void*>(0x10));
+	typeCombo->Append("Water", reinterpret_cast<void*>(0x20));
+	typeCombo->Append("Fire", reinterpret_cast<void*>(0x30));
+	typeCombo->Append("Light", reinterpret_cast<void*>(0x40));
+	typeCombo->Append("Dark", reinterpret_cast<void*>(0x50));
+	typeCombo->SetSelection(0);
+	auto* editId = new wxTextCtrl(this, wxID_ANY, _("0"), wxDefaultPosition, wxDefaultSize, 0, validator);
+
+	typeIdRow->Add(labelType, 1, wxALL, 5);
+	typeIdRow->Add(typeCombo, 1, wxALL, 5);
+	typeIdRow->Add(labelId, 1, wxALL, 5);
+	typeIdRow->Add(editId, 1, wxALL, 5);
+
+	auto* buttonRow = new wxBoxSizer(wxHORIZONTAL);
+
+	auto* createButton = new wxButton(this, wxID_ANY, _("Create"));
+	createButton->Bind(wxEVT_BUTTON, [typeCombo, editId, this](wxCommandEvent&) {
+		const uint8 type = uint8(reinterpret_cast<uint64>(typeCombo->GetClientData(typeCombo->GetSelection())) & 0xFF);
+		if (type == 0xFF)
+		{
+			wxMessageDialog idError(this, "Invalid type!", "Please select a type before continuing");
+			idError.ShowModal();
+			return;
+		}
+		unsigned int uIntid;
+		if (!editId->GetValue().ToUInt(&uIntid) || uIntid > 0xFF)
+		{
+			wxMessageDialog idError(this, "Error Converting ID!", "ID Entered is Invalid");
+			idError.ShowModal();
+			return;
+		}
+		uint8 id = uIntid & 0xFF;
+		wxString predefName = nsyshid::g_kamenridegate.FindFigure(type, id) + ".bin";
+		wxFileDialog
+			saveFileDialog(this, _("Create Kamen Rider file"), "", predefName,
+						   "Kamen Rider files (*.bin)|*.bin", wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
+
+		if (saveFileDialog.ShowModal() == wxID_CANCEL)
+			return;
+
+		m_filePath = saveFileDialog.GetPath();
+
+		if (!nsyshid::g_kamenridegate.CreateFigure(_utf8ToPath(m_filePath.utf8_string()), type, id))
+		{
+			wxMessageDialog errorMessage(this, "Failed to create file");
+			errorMessage.ShowModal();
+			this->EndModal(0);
+			return;
+		}
+
+		this->EndModal(1);
+	});
+	auto* cancelButton = new wxButton(this, wxID_ANY, _("Cancel"));
+	cancelButton->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) {
+		this->EndModal(0);
+	});
+
+	buttonRow->Add(createButton, 1, wxALL, 5);
+	buttonRow->Add(cancelButton, 1, wxALL, 5);
+
+	sizer->Add(typeIdRow, 1, wxEXPAND | wxALL, 2);
+	sizer->Add(buttonRow, 1, wxEXPAND | wxALL, 2);
+
+	this->SetSizer(sizer);
+	this->Centre(wxBOTH);
+}
+
+wxString CreateKamenRiderDialog::GetFilePath() const
+{
+	return m_filePath;
+}
+
+void EmulatedUSBDeviceFrame::UpdateSummonrideEdits()
+{
+	for (auto i = 0; i < 7; i++)
+	{
+		std::string displayString;
+		if (auto sd = m_kamenSlots[i])
+		{
+			auto [portalSlot, type, id] = sd.value();
+			displayString = nsyshid::g_kamenridegate.FindFigure(type, id);
+		}
+		else
+		{
+			displayString = "None";
+		}
+
+		m_summonrideSlots[i]->ChangeValue(displayString);
+	}
 }
