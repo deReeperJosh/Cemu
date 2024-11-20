@@ -44,30 +44,42 @@ namespace nsyshid
 	  public:
 		struct RiderFigure final
 		{
-			std::unique_ptr<FileStream> dimFile;
-			std::array<uint8, 0x2D * 0x04> data{};
+			std::unique_ptr<FileStream> kamenFile;
+			std::array<uint8, 0x14 * 0x10> data{};
 			std::array<uint8, 7> uid{};
 			bool present = false;
 			void Save();
 		};
 
-		void SendCommand(std::span<const uint8> buf);
+		void SendCommand(std::span<const uint8> buf, const uint8 length);
 		std::array<uint8, 64> GetStatus();
+
+		void GetListTags(std::array<uint8, 64>& replyBuf, uint8 command, uint8 sequence);
+		void QueryBlock(std::array<uint8, 64>& replyBuf, uint8 command, uint8 sequence,
+						const uint8* uid, uint8 block, uint8 line);
+		void WriteBlock(std::array<uint8, 64>& replyBuf, uint8 command, uint8 sequence,
+						const uint8* uid, uint8 block, uint8 line, const uint8* toWriteBuf);
+		void GetBlankResponse(uint8 command, uint8 sequence, std::array<uint8, 64>& replyBuf);
+
+		bool RemoveFigure(uint8 index);
+		uint8 LoadFigure(const std::array<uint8, 0x14 * 0x10>& buf, std::unique_ptr<FileStream> file);
+		bool CreateFigure(fs::path pathName, uint8 type, uint8 id);
+
+		std::string FindFigure(uint8 type, uint8 id);
 
 	  protected:
 		std::mutex m_kamenRiderMutex;
-		std::array<RiderFigure, 7> m_figures{};
+		std::array<RiderFigure, 8> m_figures{};
 
 	  private:
-		void GetListTags(std::array<uint8, 64>& replyBuf, uint8 command, uint8 sequence);
-		void QueryBlock(std::array<uint8, 64>& replyBuf, uint8 command, uint8 sequence,
-						const std::array<uint8, 7> uid, uint8 block, uint8 line);
 		uint8 GenerateChecksum(const std::array<uint8, 64>& data,
 							   int numOfBytes) const;
-		std::optional<RiderFigure&> GetFigureByUID(const std::array<uint8, 7> uid);
+		RiderFigure& GetFigureByUID(const std::array<uint8, 7> uid);
 
 		std::queue<std::array<uint8, 64>> m_figureAddedRemovedResponses;
 		std::queue<std::array<uint8, 64>> m_queries;
+
+		bool m_isAwake = false;
 	};
 	extern RideGateUSB g_kamenridegate;
 } // namespace nsyshid
