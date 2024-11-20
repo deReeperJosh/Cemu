@@ -7,6 +7,8 @@
 
 #include "Cafe/OS/libs/nsyshid/Infinity.h"
 #include "Cafe/OS/libs/nsyshid/Skylander.h"
+#include "Cafe/OS/libs/nsyshid/Dimensions.h"
+#include "Cafe/OS/libs/nsyshid/KamenRider.h"
 
 class wxBoxSizer;
 class wxCheckBox;
@@ -28,18 +30,23 @@ class EmulatedUSBDeviceFrame : public wxFrame
 	wxCheckBox* m_emulatePortal;
 	wxCheckBox* m_emulateBase;
 	wxCheckBox* m_emulateToypad;
+	wxCheckBox* m_emulateRidegate;
 	std::array<wxTextCtrl*, nsyshid::MAX_SKYLANDERS> m_skylanderSlots;
 	std::array<wxTextCtrl*, nsyshid::MAX_FIGURES> m_infinitySlots;
 	std::array<wxTextCtrl*, 7> m_dimensionSlots;
+	std::array<wxTextCtrl*, 7> m_summonrideSlots;
 	std::array<std::optional<std::tuple<uint8, uint16, uint16>>, nsyshid::MAX_SKYLANDERS> m_skySlots;
 	std::array<std::optional<uint32>, 7> m_dimSlots;
+	std::array<std::optional<std::tuple<uint8, uint8, uint8>>, 7> m_kamenSlots;
 
 	wxPanel* AddSkylanderPage(wxNotebook* notebook);
 	wxPanel* AddInfinityPage(wxNotebook* notebook);
 	wxPanel* AddDimensionsPage(wxNotebook* notebook);
+	wxPanel* AddSummonridePage(wxNotebook* notebook);
 	wxBoxSizer* AddSkylanderRow(uint8 row_number, wxStaticBox* box);
 	wxBoxSizer* AddInfinityRow(wxString name, uint8 row_number, wxStaticBox* box);
 	wxBoxSizer* AddDimensionPanel(uint8 pad, uint8 index, wxStaticBox* box);
+	wxBoxSizer* AddSummonrideRow(uint8 row_number, wxStaticBox* box);
 	void LoadSkylander(uint8 slot);
 	void LoadSkylanderPath(uint8 slot, wxString path);
 	void CreateSkylander(uint8 slot);
@@ -54,6 +61,11 @@ class EmulatedUSBDeviceFrame : public wxFrame
 	void CreateMinifig(uint8 pad, uint8 index);
 	void ClearMinifig(uint8 pad, uint8 index);
 	void MoveMinifig(uint8 pad, uint8 index);
+	void LoadKamenRider(uint8 slot);
+	void LoadKamenRiderPath(uint8 slot, wxString path);
+	void CreateKamenRider(uint8 slot);
+	void ClearKamenRider(uint8 slot);
+	void UpdateSummonrideEdits();
 };
 
 class CreateSkylanderDialog : public wxDialog
@@ -99,4 +111,14 @@ class MoveDimensionFigureDialog : public wxDialog
 
   private:
 	wxBoxSizer* AddMinifigSlot(uint8 pad, uint8 index, uint8 oldIndex, std::optional<uint32> currentId);
+};
+
+class CreateKamenRiderDialog : public wxDialog
+{
+  public:
+	explicit CreateKamenRiderDialog(wxWindow* parent, uint8 slot);
+	wxString GetFilePath() const;
+
+  protected:
+	wxString m_filePath;
 };
