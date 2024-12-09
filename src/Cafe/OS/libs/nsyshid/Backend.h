@@ -12,7 +12,7 @@ namespace nsyshid
 	typedef struct
 	{
 		/* +0x00 */ uint32be handle;
-		/* +0x04 */ uint32 ukn04;
+		/* +0x04 */ uint32 physicalDeviceInst;
 		/* +0x08 */ uint16 vendorId;  // little-endian ?
 		/* +0x0A */ uint16 productId; // little-endian ?
 		/* +0x0C */ uint8 ifIndex;
@@ -63,10 +63,12 @@ namespace nsyshid
 		sint32 length;
 		uint8* originalData;
 		sint32 originalLength;
+		uint8 reportType;
+		uint8 reportId;
 
-		ReportMessage(uint8* reportData, sint32 length, uint8* originalData, sint32 originalLength)
+		ReportMessage(uint8* reportData, sint32 length, uint8* originalData, sint32 originalLength, uint8 reportType, uint8 reportId)
 			: reportData(reportData), length(length), originalData(originalData),
-			  originalLength(originalLength), TransferCommand(reportData, length)
+			  originalLength(originalLength), reportType(reportType), reportId(reportId), TransferCommand(reportData, length)
 		{
 		}
 		using TransferCommand::TransferCommand;

@@ -307,14 +307,16 @@ namespace nsyshid
 
 	void export_HIDGetDescriptor(PPCInterpreter_t* hCPU)
 	{
-		ppcDefineParamU32(hidHandle, 0);	   // r3
-		ppcDefineParamU8(descType, 1);		   // r4
-		ppcDefineParamU8(descIndex, 2);		   // r5
-		ppcDefineParamU8(lang, 3);			   // r6
-		ppcDefineParamUStr(output, 4);		   // r7
-		ppcDefineParamU32(outputMaxLength, 5); // r8
-		ppcDefineParamMPTR(cbFuncMPTR, 6);	   // r9
-		ppcDefineParamMPTR(cbParamMPTR, 7);	   // r10
+		ppcDefineParamU32(hidHandle, 0);		  // r3
+		ppcDefineParamU8(descType, 1);			  // r4
+		ppcDefineParamU8(descIndex, 2);			  // r5
+		ppcDefineParamU16(lang, 3);				  // r6
+		ppcDefineParamUStr(output, 4);			  // r7
+		ppcDefineParamU32(outputMaxLength, 5);	  // r8
+		ppcDefineParamMPTR(callbackFuncMPTR, 6);  // r9
+		ppcDefineParamMPTR(callbackParamMPTR, 7); // r10
+
+		cemuLog_logDebug(LogType::Force, "nsyshid.HIDGetDescriptor 0x{:x} 0x{:x} 0x{:x} 0x{:x} 0x{:x}", hidHandle, descType, descIndex, lang, outputMaxLength);
 
 		int returnValue = -1;
 		std::shared_ptr<Device> device = GetDeviceByHandle(hidHandle, true);
@@ -357,9 +359,9 @@ namespace nsyshid
 	void export_HIDSetIdle(PPCInterpreter_t* hCPU)
 	{
 		ppcDefineParamU32(hidHandle, 0);		  // r3
-		ppcDefineParamU32(ifIndex, 1);			  // r4
-		ppcDefineParamU32(ukn, 2);				  // r5
-		ppcDefineParamU32(duration, 3);			  // r6
+		ppcDefineParamU8(ifIndex, 1);			  // r4
+		ppcDefineParamU8(reportId, 2);			  // r5
+		ppcDefineParamU8(duration, 3);			  // r6
 		ppcDefineParamMPTR(callbackFuncMPTR, 4);  // r7
 		ppcDefineParamMPTR(callbackParamMPTR, 5); // r8
 		cemuLog_logDebug(LogType::Force, "nsyshid.HIDSetIdle(...)");
@@ -383,7 +385,7 @@ namespace nsyshid
 		ppcDefineParamU8(protocol, 2);			  // r5
 		ppcDefineParamMPTR(callbackFuncMPTR, 3);  // r6
 		ppcDefineParamMPTR(callbackParamMPTR, 4); // r7
-		cemuLog_logDebug(LogType::Force, "nsyshid.HIDSetProtocol(...)");
+		cemuLog_logDebug(LogType::Force, "nsyshid.HIDSetProtocol(0x{:x}, 0x{:x}, 0x{:x})", hidHandle, ifIndex, protocol);
 
 		std::shared_ptr<Device> device = GetDeviceByHandle(hidHandle, true);
 		sint32 returnCode = -1;
@@ -414,12 +416,11 @@ namespace nsyshid
 	}
 
 	// handler for async HIDSetReport transfers
-	void _hidSetReportAsync(std::shared_ptr<Device> device, uint8* reportData, sint32 length,
-							uint8* originalData,
-							sint32 originalLength, MPTR callbackFuncMPTR, MPTR callbackParamMPTR)
+	void _hidSetReportAsync(std::shared_ptr<Device> device, uint8* reportData, sint32 length, uint8 reportType, uint8 reportId,
+							uint8* originalData, sint32 originalLength, MPTR callbackFuncMPTR, MPTR callbackParamMPTR)
 	{
 		cemuLog_logDebug(LogType::Force, "_hidSetReportAsync begin");
-		ReportMessage message(reportData, length, originalData, originalLength);
+		ReportMessage message(reportData, length, originalData, originalLength, reportType, reportId);
 		if (device->SetReport(&message))
 		{
 			DoHIDTransferCallback(callbackFuncMPTR,
@@ -442,12 +443,12 @@ namespace nsyshid
 	}
 
 	// handler for synchronous HIDSetReport transfers
-	sint32 _hidSetReportSync(std::shared_ptr<Device> device, uint8* reportData, sint32 length,
+	sint32 _hidSetReportSync(std::shared_ptr<Device> device, uint8* reportData, sint32 length, uint8 reportType, uint8 reportId,
 							 uint8* originalData, sint32 originalLength, coreinit::OSEvent* event)
 	{
 		_debugPrintHex("_hidSetReportSync Begin", reportData, length);
 		sint32 returnCode = 0;
-		ReportMessage message(reportData, length, originalData, originalLength);
+		ReportMessage message(reportData, length, originalData, originalLength, reportType, reportId);
 		if (device->SetReport(&message))
 		{
 			returnCode = originalLength;
@@ -461,19 +462,18 @@ namespace nsyshid
 	void export_HIDSetReport(PPCInterpreter_t* hCPU)
 	{
 		ppcDefineParamU32(hidHandle, 0);		  // r3
-		ppcDefineParamU32(reportRelatedUkn, 1);	  // r4
-		ppcDefineParamU32(reportId, 2);			  // r5
+		ppcDefineParamU8(reportType, 1);		  // r4
+		ppcDefineParamU8(reportId, 2);			  // r5
 		ppcDefineParamUStr(data, 3);			  // r6
 		ppcDefineParamU32(dataLength, 4);		  // r7
 		ppcDefineParamMPTR(callbackFuncMPTR, 5);  // r8
 		ppcDefineParamMPTR(callbackParamMPTR, 6); // r9
-		cemuLog_logDebug(LogType::Force, "nsyshid.HIDSetReport({},0x{:02x},0x{:02x},...)", hidHandle, reportRelatedUkn,
-						 reportId);
+		cemuLog_logDebug(LogType::Force, "nsyshid.HIDSetReport({},0x{:02x},0x{:02x},...)", hidHandle, reportType, reportId);
 
 		_debugPrintHex("HIDSetReport", data, dataLength);
 
 #ifdef CEMU_DEBUG_ASSERT
-		if (reportRelatedUkn != 2 || reportId != 0)
+		if (reportType != 2 || reportId != 0)
 			assert_dbg();
 #endif
 
@@ -502,14 +502,14 @@ namespace nsyshid
 			StackAllocator<coreinit::OSEvent> event;
 			coreinit::OSInitEvent(&event, coreinit::OSEvent::EVENT_STATE::STATE_NOT_SIGNALED, coreinit::OSEvent::EVENT_MODE::MODE_AUTO);
 			std::future<sint32> res = std::async(std::launch::async, &_hidSetReportSync, device, reportData,
-												 paddedLength + 1, data, dataLength, &event);
+												 paddedLength + 1, reportType, reportId, data, dataLength, &event);
 			coreinit::OSWaitEvent(&event);
 			returnCode = res.get();
 		}
 		else
 		{
 			// asynchronous
-			std::thread(&_hidSetReportAsync, device, reportData, paddedLength + 1, data, dataLength,
+			std::thread(&_hidSetReportAsync, device, reportData, paddedLength + 1, reportType, reportId, data, dataLength,
 						callbackFuncMPTR, callbackParamMPTR)
 				.detach();
 			returnCode = 0;
@@ -715,14 +715,14 @@ namespace nsyshid
 	void export_HIDDecodeError(PPCInterpreter_t* hCPU)
 	{
 		ppcDefineParamU32(errorCode, 0);
-		ppcDefineParamTypePtr(ukn0, uint32be, 1);
-		ppcDefineParamTypePtr(ukn1, uint32be, 2);
+		ppcDefineParamTypePtr(category, uint32be, 1);
+		ppcDefineParamTypePtr(code, uint32be, 2);
 		cemuLog_logDebug(LogType::Force, "nsyshid.HIDDecodeError(0x{:08x},0x{:08x},0x{:08x})", hCPU->gpr[3],
 						 hCPU->gpr[4], hCPU->gpr[5]);
 
 		// todo
-		*ukn0 = 0x3FF;
-		*ukn1 = (uint32)-0x7FFF;
+		*category = 0x3FF;
+		*code = (uint32)-0x7FFF;
 
 		osLib_returnFromFunction(hCPU, 0);
 	}
@@ -832,7 +832,7 @@ namespace nsyshid
 			hid->ifIndex = this->m_interfaceIndex;
 			hid->subClass = this->m_interfaceSubClass;
 			hid->protocol = this->m_protocol;
-			hid->ukn04 = 0x11223344;
+			hid->physicalDeviceInst = 0x11223344;
 			hid->paddingGuessed0F = 0;
 			hid->maxPacketSizeRX = this->m_maxPacketSizeRX;
 			hid->maxPacketSizeTX = this->m_maxPacketSizeTX;
@@ -844,6 +844,7 @@ namespace nsyshid
 	{
 		osLib_addFunction("nsyshid", "HIDAddClient", export_HIDAddClient);
 		osLib_addFunction("nsyshid", "HIDDelClient", export_HIDDelClient);
+
 		osLib_addFunction("nsyshid", "HIDGetDescriptor", export_HIDGetDescriptor);
 		osLib_addFunction("nsyshid", "HIDSetIdle", export_HIDSetIdle);
 		osLib_addFunction("nsyshid", "HIDSetProtocol", export_HIDSetProtocol);

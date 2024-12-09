@@ -790,11 +790,13 @@ namespace nsyshid::backend::libusb
 			return false;
 		}
 
+		uint16 wValue = (uint16(message->reportType) << 8) | uint16(message->reportId);
+
 		int ret = libusb_control_transfer(handleLock->GetHandle(),
 										  LIBUSB_REQUEST_TYPE_CLASS | LIBUSB_RECIPIENT_INTERFACE | LIBUSB_ENDPOINT_OUT,
 										  LIBUSB_REQUEST_SET_CONFIGURATION,
-										  512,
-										  0,
+										  wValue,
+										  m_interfaceIndex,
 										  message->originalData,
 										  message->originalLength,
 										  0);
