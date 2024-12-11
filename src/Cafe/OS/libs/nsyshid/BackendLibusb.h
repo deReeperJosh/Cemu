@@ -79,6 +79,10 @@ namespace nsyshid::backend::libusb
 						   uint8* output,
 						   uint32 outputMaxLength) override;
 
+		bool SetIdle(uint8 ifIndex,
+					 uint8 reportId,
+					 uint8 duration) override;
+
 		bool SetProtocol(uint8 ifIndex, uint8 protocol) override;
 
 		int ClaimAllInterfaces(uint8 config_num);

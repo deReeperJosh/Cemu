@@ -627,6 +627,13 @@ namespace nsyshid
 		return true;
 	}
 
+	bool SkylanderPortalDevice::SetIdle(uint8 ifIndex,
+									 uint8 reportId,
+									 uint8 duration)
+	{
+		return true;
+	}
+
 	bool SkylanderPortalDevice::SetProtocol(uint8 ifIndex, uint8 protocol)
 	{
 		return true;

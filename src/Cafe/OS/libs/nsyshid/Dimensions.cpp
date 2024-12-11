@@ -489,6 +489,13 @@ namespace nsyshid
 		return true;
 	}
 
+	bool DimensionsToypadDevice::SetIdle(uint8 ifIndex,
+										 uint8 reportId,
+										 uint8 duration)
+	{
+		return true;
+	}
+
 	bool DimensionsToypadDevice::SetProtocol(uint8 ifIndex, uint8 protocol)
 	{
 		cemuLog_log(LogType::Force, "Toypad Protocol");

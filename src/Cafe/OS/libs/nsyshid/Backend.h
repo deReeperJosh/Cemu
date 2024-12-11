@@ -59,13 +59,15 @@ namespace nsyshid
 
 	struct ReportMessage final : TransferCommand
 	{
+		uint8 reportType;
+		uint8 reportId;
 		uint8* reportData;
 		sint32 length;
 		uint8* originalData;
 		sint32 originalLength;
 
-		ReportMessage(uint8* reportData, sint32 length, uint8* originalData, sint32 originalLength)
-			: reportData(reportData), length(length), originalData(originalData),
+		ReportMessage(uint8 reportType, uint8 reportId, uint8* reportData, sint32 length, uint8* originalData, sint32 originalLength)
+			: reportType(reportType), reportId(reportId), reportData(reportData), length(length), originalData(originalData),
 			  originalLength(originalLength), TransferCommand(reportData, length)
 		{
 		}
@@ -134,6 +136,10 @@ namespace nsyshid
 								   uint8 lang,
 								   uint8* output,
 								   uint32 outputMaxLength) = 0;
+
+		virtual bool SetIdle(uint8 ifIndex,
+							 uint8 reportId,
+							 uint8 duration) = 0;
 
 		virtual bool SetProtocol(uint8 ifIndex, uint8 protocol) = 0;
 
