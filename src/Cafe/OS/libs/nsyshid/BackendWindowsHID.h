@@ -45,7 +45,7 @@ namespace nsyshid::backend::windows
 
 		WriteResult Write(WriteMessage* message) override;
 
-		bool GetDescriptor(uint8 descType, uint8 descIndex, uint8 lang, uint8* output, uint32 outputMaxLength) override;
+		bool GetDescriptor(uint8 descType, uint8 descIndex, uint16 lang, uint8* output, uint32 outputMaxLength) override;
 
 		bool SetProtocol(uint8 ifIndex, uint8 protocol) override;
 

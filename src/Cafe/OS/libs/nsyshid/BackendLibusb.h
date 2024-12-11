@@ -10,6 +10,16 @@
 
 namespace nsyshid::backend::libusb
 {
+	enum : uint8
+	{
+		HID_CLASS_GET_REPORT   = 0x01,
+		HID_CLASS_GET_IDLE     = 0x02,
+		HID_CLASS_GET_PROTOCOL = 0x03,
+		HID_CLASS_SET_REPORT   = 0x09,
+		HID_CLASS_SET_IDLE     = 0x0A,
+		HID_CLASS_SET_PROTOCOL = 0x0B
+	};
+
 	class BackendLibusb : public nsyshid::Backend {
 	  public:
 		BackendLibusb();
@@ -75,9 +85,13 @@ namespace nsyshid::backend::libusb
 
 		bool GetDescriptor(uint8 descType,
 						   uint8 descIndex,
-						   uint8 lang,
+						   uint16 lang,
 						   uint8* output,
 						   uint32 outputMaxLength) override;
+
+		bool SetIdle(uint8 ifIndex,
+					 uint8 reportId,
+					 uint8 duration) override;
 
 		bool SetProtocol(uint8 ifIndex, uint8 protocol) override;
 

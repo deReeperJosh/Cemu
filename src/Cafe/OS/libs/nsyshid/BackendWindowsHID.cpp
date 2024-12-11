@@ -313,7 +313,7 @@ namespace nsyshid::backend::windows
 
 	bool DeviceWindowsHID::GetDescriptor(uint8 descType,
 										 uint8 descIndex,
-										 uint8 lang,
+										 uint16 lang,
 										 uint8* output,
 										 uint32 outputMaxLength)
 	{

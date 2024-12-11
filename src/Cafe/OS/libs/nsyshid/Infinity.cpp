@@ -387,7 +387,7 @@ namespace nsyshid
 
 	bool InfinityBaseDevice::GetDescriptor(uint8 descType,
 										   uint8 descIndex,
-										   uint8 lang,
+										   uint16 lang,
 										   uint8* output,
 										   uint32 outputMaxLength)
 	{
@@ -447,6 +447,13 @@ namespace nsyshid
 
 		memcpy(output, configurationDescriptor,
 			   std::min<uint32>(outputMaxLength, sizeof(configurationDescriptor)));
+		return true;
+	}
+
+	bool InfinityBaseDevice::SetIdle(uint8 ifIndex,
+										 uint8 reportId,
+										 uint8 duration)
+	{
 		return true;
 	}
 

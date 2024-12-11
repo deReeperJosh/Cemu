@@ -125,7 +125,7 @@ option(ENABLE_CUBEB "Enabled cubeb backend" ON)
 
 # usb hid backends
 if (WIN32)
-	option(ENABLE_NSYSHID_WINDOWS_HID "Enables the native Windows HID backend for nsyshid" ON)
+	option(ENABLE_NSYSHID_WINDOWS_HID "Enables the native Windows HID backend for nsyshid" OFF)
 endif ()
 # libusb and windows hid backends shouldn't be active at the same time; otherwise we'd see all devices twice!
 if (NOT ENABLE_NSYSHID_WINDOWS_HID)
