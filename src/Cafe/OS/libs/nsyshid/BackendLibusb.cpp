@@ -15,8 +15,8 @@ namespace nsyshid::backend::libusb
 		if (m_initReturnCode < 0)
 		{
 			m_ctx = nullptr;
-			cemuLog_logDebug(LogType::Force, "nsyshid::BackendLibusb: failed to initialize libusb, return code: {}",
-							 m_initReturnCode);
+			cemuLog_log(LogType::Force, "nsyshid::BackendLibusb: failed to initialize libusb, return code: {}",
+						m_initReturnCode);
 			return;
 		}
 
@@ -34,13 +34,13 @@ namespace nsyshid::backend::libusb
 													   &m_hotplugCallbackHandle);
 			if (ret != LIBUSB_SUCCESS)
 			{
-				cemuLog_logDebug(LogType::Force,
-								 "nsyshid::BackendLibusb: failed to register hotplug callback with return code {}",
-								 ret);
+				cemuLog_log(LogType::Force,
+							"nsyshid::BackendLibusb: failed to register hotplug callback with return code {}",
+							ret);
 			}
 			else
 			{
-				cemuLog_logDebug(LogType::Force, "nsyshid::BackendLibusb: registered hotplug callback");
+				cemuLog_log(LogType::Force, "nsyshid::BackendLibusb: registered hotplug callback");
 				m_callbackRegistered = true;
 				m_hotplugThread = std::thread([this] {
 					while (!m_hotplugThreadStop)
@@ -52,9 +52,9 @@ namespace nsyshid::backend::libusb
 						int ret = libusb_handle_events_timeout_completed(m_ctx, &timeout, nullptr);
 						if (ret != 0)
 						{
-							cemuLog_logDebug(LogType::Force,
-											 "nsyshid::BackendLibusb: hotplug thread: error handling events: {}",
-											 ret);
+							cemuLog_log(LogType::Force,
+										"nsyshid::BackendLibusb: hotplug thread: error handling events: {}",
+										ret);
 							std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 						}
 					}
@@ -63,7 +63,7 @@ namespace nsyshid::backend::libusb
 		}
 		else
 		{
-			cemuLog_logDebug(LogType::Force, "nsyshid::BackendLibusb: hotplug not supported by this version of libusb");
+			cemuLog_log(LogType::Force, "nsyshid::BackendLibusb: hotplug not supported by this version of libusb");
 		}
 	}
 
@@ -130,7 +130,7 @@ namespace nsyshid::backend::libusb
 		int ret = libusb_get_device_descriptor(dev, &desc);
 		if (ret < 0)
 		{
-			cemuLog_logDebug(LogType::Force, "nsyshid::BackendLibusb::OnHotplug(): failed to get device descriptor");
+			cemuLog_log(LogType::Force, "nsyshid::BackendLibusb::OnHotplug(): failed to get device descriptor");
 			return 0;
 		}
 
@@ -138,9 +138,9 @@ namespace nsyshid::backend::libusb
 		{
 		case LIBUSB_HOTPLUG_EVENT_DEVICE_ARRIVED:
 		{
-			cemuLog_logDebug(LogType::Force, "nsyshid::BackendLibusb::OnHotplug(): device arrived: {:04x}:{:04x}",
-							 desc.idVendor,
-							 desc.idProduct);
+			cemuLog_log(LogType::Force, "nsyshid::BackendLibusb::OnHotplug(): device arrived: {:04x}:{:04x}",
+						desc.idVendor,
+						desc.idProduct);
 			auto device = CheckAndCreateDevice(dev);
 			if (device != nullptr)
 			{
@@ -166,9 +166,9 @@ namespace nsyshid::backend::libusb
 		break;
 		case LIBUSB_HOTPLUG_EVENT_DEVICE_LEFT:
 		{
-			cemuLog_logDebug(LogType::Force, "nsyshid::BackendLibusb::OnHotplug(): device left: {:04x}:{:04x}",
-							 desc.idVendor,
-							 desc.idProduct);
+			cemuLog_log(LogType::Force, "nsyshid::BackendLibusb::OnHotplug(): device left: {:04x}:{:04x}",
+						desc.idVendor,
+						desc.idProduct);
 			auto device = FindLibusbDevice(dev);
 			if (device != nullptr)
 			{
@@ -203,8 +203,8 @@ namespace nsyshid::backend::libusb
 		int ret = libusb_get_device_descriptor(dev, &desc);
 		if (ret < 0)
 		{
-			cemuLog_logDebug(LogType::Force,
-							 "nsyshid::BackendLibusb::FindLibusbDevice(): failed to get device descriptor");
+			cemuLog_log(LogType::Force,
+						"nsyshid::BackendLibusb::FindLibusbDevice(): failed to get device descriptor");
 			return nullptr;
 		}
 		uint8 busNumber = libusb_get_bus_number(dev);
@@ -268,8 +268,8 @@ namespace nsyshid::backend::libusb
 		}
 		if (desc.idVendor == 0x0e6f && desc.idProduct == 0x0241)
 		{
-			cemuLog_logDebug(LogType::Force,
-							 "nsyshid::BackendLibusb::CheckAndCreateDevice(): lego dimensions portal detected");
+			cemuLog_log(LogType::Force,
+						"nsyshid::BackendLibusb::CheckAndCreateDevice(): lego dimensions portal detected");
 		}
 		auto device = std::make_shared<DeviceLibusb>(m_ctx,
 													 desc.idVendor,
@@ -408,6 +408,7 @@ namespace nsyshid::backend::libusb
 		}
 		libusb_device* dev;
 		libusb_device* found = nullptr;
+		uint8 numConfigs = 0;
 		for (int i = 0; (dev = devices[i]) != nullptr; i++)
 		{
 			struct libusb_device_descriptor desc;
@@ -427,6 +428,7 @@ namespace nsyshid::backend::libusb
 			{
 				// we found our device!
 				found = dev;
+				numConfigs = desc.bNumConfigurations;
 				break;
 			}
 		}
@@ -446,12 +448,13 @@ namespace nsyshid::backend::libusb
 				}
 				this->m_handleInUseCounter = 0;
 			}
+
+			int ret = ClaimAllInterfaces(0);
+
+			if (ret != 0)
 			{
-				int ret = ClaimAllInterfaces(0);
-				if (ret != 0)
-				{
-					cemuLog_logDebug(LogType::Force, "nsyshid::DeviceLibusb::open(): cannot claim interface");
-				}
+				cemuLog_log(LogType::Force, "nsyshid::DeviceLibusb::open(): cannot claim interface for config 0");
+				return false;
 			}
 		}
 
@@ -475,7 +478,7 @@ namespace nsyshid::backend::libusb
 			{
 				m_handleInUseCounterDecremented.wait(lock);
 			}
-			libusb_release_interface(handle, 0);
+			ReleaseAllInterfacesForCurrentConfig();
 			libusb_close(handle);
 			m_handleInUseCounter = -1;
 			m_handleInUseCounterDecremented.notify_all();
@@ -492,8 +495,8 @@ namespace nsyshid::backend::libusb
 		auto handleLock = AquireHandleLock();
 		if (!handleLock->IsValid())
 		{
-			cemuLog_logDebug(LogType::Force,
-							 "nsyshid::DeviceLibusb::read(): cannot read from a non-opened device\n");
+			cemuLog_log(LogType::Force,
+						"nsyshid::DeviceLibusb::read(): cannot read from a non-opened device\n");
 			return ReadResult::Error;
 		}
 
@@ -502,12 +505,12 @@ namespace nsyshid::backend::libusb
 		int ret = 0;
 		do
 		{
-			ret = libusb_bulk_transfer(handleLock->GetHandle(),
-									   this->m_libusbEndpointIn,
-									   message->data,
-									   message->length,
-									   &actualLength,
-									   timeout);
+			ret = libusb_interrupt_transfer(handleLock->GetHandle(),
+											this->m_libusbEndpointIn,
+											message->data,
+											message->length,
+											&actualLength,
+											timeout);
 		}
 		while (ret == LIBUSB_ERROR_TIMEOUT && actualLength == 0 && IsOpened());
 
@@ -520,9 +523,9 @@ namespace nsyshid::backend::libusb
 			message->bytesRead = actualLength;
 			return ReadResult::Success;
 		}
-		cemuLog_logDebug(LogType::Force,
-						 "nsyshid::DeviceLibusb::read(): failed with error code: {}",
-						 ret);
+		cemuLog_log(LogType::Force,
+					"nsyshid::DeviceLibusb::read(): failed at endpoint 0x{:02x} with error message: {}", this->m_libusbEndpointIn,
+					libusb_error_name(ret));
 		return ReadResult::Error;
 	}
 
@@ -531,19 +534,19 @@ namespace nsyshid::backend::libusb
 		auto handleLock = AquireHandleLock();
 		if (!handleLock->IsValid())
 		{
-			cemuLog_logDebug(LogType::Force,
-							 "nsyshid::DeviceLibusb::write(): cannot write to a non-opened device\n");
+			cemuLog_log(LogType::Force,
+						"nsyshid::DeviceLibusb::write(): cannot write to a non-opened device\n");
 			return WriteResult::Error;
 		}
 
 		message->bytesWritten = 0;
 		int actualLength = 0;
-		int ret = libusb_bulk_transfer(handleLock->GetHandle(),
-									   this->m_libusbEndpointOut,
-									   message->data,
-									   message->length,
-									   &actualLength,
-									   0);
+		int ret = libusb_interrupt_transfer(handleLock->GetHandle(),
+											this->m_libusbEndpointOut,
+											message->data,
+											message->length,
+											&actualLength,
+											0);
 
 		if (ret == 0)
 		{
@@ -555,9 +558,9 @@ namespace nsyshid::backend::libusb
 							 message->length);
 			return WriteResult::Success;
 		}
-		cemuLog_logDebug(LogType::Force,
-						 "nsyshid::DeviceLibusb::write(): failed with error code: {}",
-						 ret);
+		cemuLog_log(LogType::Force,
+					"nsyshid::DeviceLibusb::write(): failed with error code: {}",
+					ret);
 		return WriteResult::Error;
 	}
 
@@ -570,135 +573,61 @@ namespace nsyshid::backend::libusb
 		auto handleLock = AquireHandleLock();
 		if (!handleLock->IsValid())
 		{
-			cemuLog_logDebug(LogType::Force, "nsyshid::DeviceLibusb::getDescriptor(): device is not opened");
+			cemuLog_log(LogType::Force, "nsyshid::DeviceLibusb::getDescriptor(): device is not opened");
 			return false;
 		}
 
-		if (descType == 0x02)
+		uint16 wValue = uint16(descType) << 8 | uint16(descIndex);
+
+		// HID Get_Descriptor requests are handled via libusb_control_transfer
+		int ret = libusb_control_transfer(handleLock->GetHandle(),
+										  LIBUSB_REQUEST_TYPE_STANDARD | LIBUSB_ENDPOINT_IN,
+										  LIBUSB_REQUEST_GET_DESCRIPTOR,
+										  wValue,
+										  lang,
+										  output,
+										  outputMaxLength,
+										  0);
+
+		if (ret != outputMaxLength)
 		{
-			struct libusb_config_descriptor* conf = nullptr;
-			libusb_device* dev = libusb_get_device(handleLock->GetHandle());
-			int ret = libusb_get_active_config_descriptor(dev, &conf);
-
-			if (ret == 0)
-			{
-				std::vector<uint8> configurationDescriptor(conf->wTotalLength);
-				uint8* currentWritePtr = &configurationDescriptor[0];
-
-				// configuration descriptor
-				cemu_assert_debug(conf->bLength == LIBUSB_DT_CONFIG_SIZE);
-				*(uint8*)(currentWritePtr + 0) = conf->bLength;				// bLength
-				*(uint8*)(currentWritePtr + 1) = conf->bDescriptorType;		// bDescriptorType
-				*(uint16be*)(currentWritePtr + 2) = conf->wTotalLength;		// wTotalLength
-				*(uint8*)(currentWritePtr + 4) = conf->bNumInterfaces;		// bNumInterfaces
-				*(uint8*)(currentWritePtr + 5) = conf->bConfigurationValue; // bConfigurationValue
-				*(uint8*)(currentWritePtr + 6) = conf->iConfiguration;		// iConfiguration
-				*(uint8*)(currentWritePtr + 7) = conf->bmAttributes;		// bmAttributes
-				*(uint8*)(currentWritePtr + 8) = conf->MaxPower;			// MaxPower
-				currentWritePtr = currentWritePtr + conf->bLength;
-
-				for (uint8_t interfaceIndex = 0; interfaceIndex < conf->bNumInterfaces; interfaceIndex++)
-				{
-					const struct libusb_interface& interface = conf->interface[interfaceIndex];
-					for (int altsettingIndex = 0; altsettingIndex < interface.num_altsetting; altsettingIndex++)
-					{
-						// interface descriptor
-						const struct libusb_interface_descriptor& altsetting = interface.altsetting[altsettingIndex];
-						cemu_assert_debug(altsetting.bLength == LIBUSB_DT_INTERFACE_SIZE);
-						*(uint8*)(currentWritePtr + 0) = altsetting.bLength;			// bLength
-						*(uint8*)(currentWritePtr + 1) = altsetting.bDescriptorType;	// bDescriptorType
-						*(uint8*)(currentWritePtr + 2) = altsetting.bInterfaceNumber;	// bInterfaceNumber
-						*(uint8*)(currentWritePtr + 3) = altsetting.bAlternateSetting;	// bAlternateSetting
-						*(uint8*)(currentWritePtr + 4) = altsetting.bNumEndpoints;		// bNumEndpoints
-						*(uint8*)(currentWritePtr + 5) = altsetting.bInterfaceClass;	// bInterfaceClass
-						*(uint8*)(currentWritePtr + 6) = altsetting.bInterfaceSubClass; // bInterfaceSubClass
-						*(uint8*)(currentWritePtr + 7) = altsetting.bInterfaceProtocol; // bInterfaceProtocol
-						*(uint8*)(currentWritePtr + 8) = altsetting.iInterface;			// iInterface
-						currentWritePtr = currentWritePtr + altsetting.bLength;
-
-						if (altsetting.extra_length > 0)
-						{
-							// unknown descriptors - copy the ones that we can identify ourselves
-							const unsigned char* extraReadPointer = altsetting.extra;
-							while (extraReadPointer - altsetting.extra < altsetting.extra_length)
-							{
-								uint8 bLength = *(uint8*)(extraReadPointer + 0);
-								if (bLength == 0)
-								{
-									// prevent endless loop
-									break;
-								}
-								if (extraReadPointer + bLength - altsetting.extra > altsetting.extra_length)
-								{
-									// prevent out of bounds read
-									break;
-								}
-								uint8 bDescriptorType = *(uint8*)(extraReadPointer + 1);
-								// HID descriptor
-								if (bDescriptorType == LIBUSB_DT_HID && bLength == 9)
-								{
-									*(uint8*)(currentWritePtr + 0) =
-										*(uint8*)(extraReadPointer + 0); // bLength
-									*(uint8*)(currentWritePtr + 1) =
-										*(uint8*)(extraReadPointer + 1); // bDescriptorType
-									*(uint16be*)(currentWritePtr + 2) =
-										*(uint16*)(extraReadPointer + 2); // bcdHID
-									*(uint8*)(currentWritePtr + 4) =
-										*(uint8*)(extraReadPointer + 4); // bCountryCode
-									*(uint8*)(currentWritePtr + 5) =
-										*(uint8*)(extraReadPointer + 5); // bNumDescriptors
-									*(uint8*)(currentWritePtr + 6) =
-										*(uint8*)(extraReadPointer + 6); // bDescriptorType
-									*(uint16be*)(currentWritePtr + 7) =
-										*(uint16*)(extraReadPointer + 7); // wDescriptorLength
-									currentWritePtr += bLength;
-								}
-								extraReadPointer += bLength;
-							}
-						}
-
-						for (int endpointIndex = 0; endpointIndex < altsetting.bNumEndpoints; endpointIndex++)
-						{
-							// endpoint descriptor
-							const struct libusb_endpoint_descriptor& endpoint = altsetting.endpoint[endpointIndex];
-							cemu_assert_debug(endpoint.bLength == LIBUSB_DT_ENDPOINT_SIZE ||
-											  endpoint.bLength == LIBUSB_DT_ENDPOINT_AUDIO_SIZE);
-							*(uint8*)(currentWritePtr + 0) = endpoint.bLength;
-							*(uint8*)(currentWritePtr + 1) = endpoint.bDescriptorType;
-							*(uint8*)(currentWritePtr + 2) = endpoint.bEndpointAddress;
-							*(uint8*)(currentWritePtr + 3) = endpoint.bmAttributes;
-							*(uint16be*)(currentWritePtr + 4) = endpoint.wMaxPacketSize;
-							*(uint8*)(currentWritePtr + 6) = endpoint.bInterval;
-							if (endpoint.bLength == LIBUSB_DT_ENDPOINT_AUDIO_SIZE)
-							{
-								*(uint8*)(currentWritePtr + 7) = endpoint.bRefresh;
-								*(uint8*)(currentWritePtr + 8) = endpoint.bSynchAddress;
-							}
-							currentWritePtr += endpoint.bLength;
-						}
-					}
-				}
-				uint32 bytesWritten = currentWritePtr - &configurationDescriptor[0];
-				libusb_free_config_descriptor(conf);
-				cemu_assert_debug(bytesWritten <= conf->wTotalLength);
-
-				memcpy(output, &configurationDescriptor[0],
-					   std::min<uint32>(outputMaxLength, bytesWritten));
-				return true;
-			}
-			else
-			{
-				cemuLog_logDebug(LogType::Force,
-								 "nsyshid::DeviceLibusb::getDescriptor(): failed to get config descriptor with error code: {}",
-								 ret);
-				return false;
-			}
+			cemuLog_log(LogType::Force, "nsyshid::DeviceLibusb::GetDescriptor(): Control Transfer Failed: {}", libusb_error_name(ret));
+			return false;
 		}
-		else
+		return true;
+	}
+
+	bool DeviceLibusb::SetIdle(uint8 ifIndex,
+							   uint8 reportId,
+							   uint8 duration)
+	{
+		auto handleLock = AquireHandleLock();
+		if (!handleLock->IsValid())
 		{
-			cemu_assert_unimplemented();
+			cemuLog_log(LogType::Force, "nsyshid::DeviceLibusb::SetIdle(): device is not opened");
+			return false;
 		}
-		return false;
+
+		std::array<uint8, 0> emptyData = {};
+
+		uint16 wValue = uint16(duration) << 8 | uint16(reportId);
+
+		// HID Set_Idle requests are handled via libusb_control_transfer
+		int ret = libusb_control_transfer(handleLock->GetHandle(),
+										  LIBUSB_REQUEST_TYPE_CLASS | LIBUSB_RECIPIENT_INTERFACE | LIBUSB_ENDPOINT_OUT,
+										  HID_CLASS_SET_IDLE, // Defined in HID Class Specific Requests (7.2)
+										  wValue,
+										  ifIndex,
+										  emptyData.data(),
+										  emptyData.size(),
+										  0);
+
+		if (ret != 0)
+		{
+			cemuLog_log(LogType::Force, "nsyshid::DeviceLibusb::SetIdle(): Control Transfer Failed: {}", libusb_error_name(ret));
+			return false;
+		}
+		return true;
 	}
 
 	template<typename Configs, typename Function>
@@ -764,21 +693,29 @@ namespace nsyshid::backend::libusb
 		auto handleLock = AquireHandleLock();
 		if (!handleLock->IsValid())
 		{
-			cemuLog_logDebug(LogType::Force, "nsyshid::DeviceLibusb::SetProtocol(): device is not opened");
+			cemuLog_log(LogType::Force, "nsyshid::DeviceLibusb::SetProtocol(): device is not opened");
 			return false;
 		}
 		if (m_interfaceIndex != ifIndex)
 			m_interfaceIndex = ifIndex;
 
-		ReleaseAllInterfacesForCurrentConfig();
-		int ret = libusb_set_configuration(AquireHandleLock()->GetHandle(), protocol);
-		if (ret == LIBUSB_SUCCESS)
-			ret = ClaimAllInterfaces(protocol);
+		std::array<uint8, 0> emptyData = {};
 
-		if (ret == LIBUSB_SUCCESS)
-			return true;
+		int ret = libusb_control_transfer(handleLock->GetHandle(),
+										  LIBUSB_REQUEST_TYPE_CLASS | LIBUSB_RECIPIENT_INTERFACE | LIBUSB_ENDPOINT_OUT,
+										  HID_CLASS_SET_PROTOCOL, // Defined in HID Class Specific Requests (7.2)
+										  protocol,
+										  ifIndex,
+										  emptyData.data(),
+										  emptyData.size(),
+										  0);
 
-		return false;
+		if (ret != 0)
+		{
+			cemuLog_log(LogType::Force, "nsyshid::DeviceLibusb::SetProtocol(): Control Transfer Failed: {}", libusb_error_name(ret));
+			return false;
+		}
+		return true;
 	}
 
 	bool DeviceLibusb::SetReport(ReportMessage* message)
@@ -786,22 +723,24 @@ namespace nsyshid::backend::libusb
 		auto handleLock = AquireHandleLock();
 		if (!handleLock->IsValid())
 		{
-			cemuLog_logDebug(LogType::Force, "nsyshid::DeviceLibusb::SetReport(): device is not opened");
+			cemuLog_log(LogType::Force, "nsyshid::DeviceLibusb::SetReport(): device is not opened");
 			return false;
 		}
 
+		uint16 wValue = uint16(message->reportType) << 8 | uint16(message->reportId);
+
 		int ret = libusb_control_transfer(handleLock->GetHandle(),
 										  LIBUSB_REQUEST_TYPE_CLASS | LIBUSB_RECIPIENT_INTERFACE | LIBUSB_ENDPOINT_OUT,
-										  LIBUSB_REQUEST_SET_CONFIGURATION,
-										  512,
-										  0,
+										  HID_CLASS_SET_REPORT, // Defined in HID Class Specific Requests (7.2)
+										  wValue,
+										  m_interfaceIndex,
 										  message->originalData,
 										  message->originalLength,
 										  0);
 
 		if (ret != message->originalLength)
 		{
-			cemuLog_logDebug(LogType::Force, "nsyshid::DeviceLibusb::SetReport(): Control Transfer Failed: {}", libusb_error_name(ret));
+			cemuLog_log(LogType::Force, "nsyshid::DeviceLibusb::SetReport(): Control Transfer Failed: {}", libusb_error_name(ret));
 			return false;
 		}
 		return true;
