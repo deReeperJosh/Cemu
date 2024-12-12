@@ -10,6 +10,16 @@
 
 namespace nsyshid::backend::libusb
 {
+	enum : uint8
+	{
+		HID_CLASS_GET_REPORT   = 0x01,
+		HID_CLASS_GET_IDLE     = 0x02,
+		HID_CLASS_GET_PROTOCOL = 0x03,
+		HID_CLASS_SET_REPORT   = 0x09,
+		HID_CLASS_SET_IDLE     = 0x0A,
+		HID_CLASS_SET_PROTOCOL = 0x0B
+	};
+
 	class BackendLibusb : public nsyshid::Backend {
 	  public:
 		BackendLibusb();

@@ -449,8 +449,6 @@ namespace nsyshid::backend::libusb
 				this->m_handleInUseCounter = 0;
 			}
 
-			int ret = libusb_set_configuration(this->m_libusbHandle, 0);
-
 			{
 				for (uint8 i = 0; i < numConfigs; i++)
 				{
@@ -578,21 +576,18 @@ namespace nsyshid::backend::libusb
 		auto handleLock = AquireHandleLock();
 		if (!handleLock->IsValid())
 		{
-			cemuLog_logDebug(LogType::Force, "nsyshid::DeviceLibusb::getDescriptor(): device is not opened");
+			cemuLog_log(LogType::Force, "nsyshid::DeviceLibusb::getDescriptor(): device is not opened");
 			return false;
 		}
 
 		uint16 wValue = uint16(descType) << 8 | uint16(descIndex);
 
-		// HID Get_Descriptor requests are handled via libusb_control_transfer
-		int ret = libusb_control_transfer(handleLock->GetHandle(),
-										  LIBUSB_REQUEST_TYPE_STANDARD | LIBUSB_RECIPIENT_INTERFACE | LIBUSB_ENDPOINT_IN,
-										  LIBUSB_REQUEST_GET_DESCRIPTOR,
-										  wValue,
-										  lang,
-										  output,
-										  outputMaxLength,
-										  0);
+		// HID Get_Descriptor requests are handled via libusb_get_descriptor
+		int ret = libusb_get_descriptor(handleLock->GetHandle(),
+										descType,
+										descIndex,
+										output,
+										outputMaxLength);
 
 		if (ret != outputMaxLength)
 		{
@@ -613,16 +608,18 @@ namespace nsyshid::backend::libusb
 			return false;
 		}
 
+		std::array<uint8, 0> emptyData = {};
+
 		uint16 wValue = uint16(duration) << 8 | uint16(reportId);
 
 		// HID Set_Idle requests are handled via libusb_control_transfer
 		int ret = libusb_control_transfer(handleLock->GetHandle(),
 										  LIBUSB_REQUEST_TYPE_CLASS | LIBUSB_RECIPIENT_INTERFACE | LIBUSB_ENDPOINT_OUT,
-										  0x0A, // Defined in HID Class Specific Requests (7.2)
+										  HID_CLASS_SET_IDLE, // Defined in HID Class Specific Requests (7.2)
 										  wValue,
 										  ifIndex,
-										  nullptr,
-										  0,
+										  emptyData.data(),
+										  emptyData.size(),
 										  0);
 
 		if (ret != 0)
@@ -702,18 +699,20 @@ namespace nsyshid::backend::libusb
 		if (m_interfaceIndex != ifIndex)
 			m_interfaceIndex = ifIndex;
 
+		std::array<uint8, 0> emptyData = {};
+
 		int ret = libusb_control_transfer(handleLock->GetHandle(),
 										  LIBUSB_REQUEST_TYPE_CLASS | LIBUSB_RECIPIENT_INTERFACE | LIBUSB_ENDPOINT_OUT,
-										  0x0B, // Defined in HID Class Specific Requests (7.2)
+										  HID_CLASS_SET_PROTOCOL, // Defined in HID Class Specific Requests (7.2)
 										  protocol,
 										  ifIndex,
-										  nullptr,
-										  0,
+										  emptyData.data(),
+										  emptyData.size(),
 										  0);
 
 		if (ret != 0)
 		{
-			cemuLog_log(LogType::Force, "nsyshid::DeviceLibusb::SetReport(): Control Transfer Failed: {}", libusb_error_name(ret));
+			cemuLog_log(LogType::Force, "nsyshid::DeviceLibusb::SetProtocol(): Control Transfer Failed: {}", libusb_error_name(ret));
 			return false;
 		}
 		return true;
@@ -732,7 +731,7 @@ namespace nsyshid::backend::libusb
 
 		int ret = libusb_control_transfer(handleLock->GetHandle(),
 										  LIBUSB_REQUEST_TYPE_CLASS | LIBUSB_RECIPIENT_INTERFACE | LIBUSB_ENDPOINT_OUT,
-										  0x09, // Defined in HID Class Specific Requests (7.2)
+										  HID_CLASS_SET_REPORT, // Defined in HID Class Specific Requests (7.2)
 										  wValue,
 										  m_interfaceIndex,
 										  message->originalData,
