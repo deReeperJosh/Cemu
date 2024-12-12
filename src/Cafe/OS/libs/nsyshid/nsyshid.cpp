@@ -414,12 +414,12 @@ namespace nsyshid
 	}
 
 	// handler for async HIDSetReport transfers
-	void _hidSetReportAsync(std::shared_ptr<Device> device, uint8* reportData, sint32 length,
+	void _hidSetReportAsync(std::shared_ptr<Device> device, uint8 reportType, uint8 reportId, uint8* reportData, sint32 length,
 							uint8* originalData,
 							sint32 originalLength, MPTR callbackFuncMPTR, MPTR callbackParamMPTR)
 	{
 		cemuLog_logDebug(LogType::Force, "_hidSetReportAsync begin");
-		ReportMessage message(reportData, length, originalData, originalLength);
+		ReportMessage message(reportType, reportId, reportData, length, originalData, originalLength);
 		if (device->SetReport(&message))
 		{
 			DoHIDTransferCallback(callbackFuncMPTR,
@@ -442,12 +442,12 @@ namespace nsyshid
 	}
 
 	// handler for synchronous HIDSetReport transfers
-	sint32 _hidSetReportSync(std::shared_ptr<Device> device, uint8* reportData, sint32 length,
+	sint32 _hidSetReportSync(std::shared_ptr<Device> device, uint8 reportType, uint8 reportId, uint8* reportData, sint32 length,
 							 uint8* originalData, sint32 originalLength, coreinit::OSEvent* event)
 	{
 		_debugPrintHex("_hidSetReportSync Begin", reportData, length);
 		sint32 returnCode = 0;
-		ReportMessage message(reportData, length, originalData, originalLength);
+		ReportMessage message(reportType, reportId, reportData, length, originalData, originalLength);
 		if (device->SetReport(&message))
 		{
 			returnCode = originalLength;
@@ -461,19 +461,19 @@ namespace nsyshid
 	void export_HIDSetReport(PPCInterpreter_t* hCPU)
 	{
 		ppcDefineParamU32(hidHandle, 0);		  // r3
-		ppcDefineParamU32(reportRelatedUkn, 1);	  // r4
+		ppcDefineParamU32(reportType, 1);	  // r4
 		ppcDefineParamU32(reportId, 2);			  // r5
 		ppcDefineParamUStr(data, 3);			  // r6
 		ppcDefineParamU32(dataLength, 4);		  // r7
 		ppcDefineParamMPTR(callbackFuncMPTR, 5);  // r8
 		ppcDefineParamMPTR(callbackParamMPTR, 6); // r9
-		cemuLog_logDebug(LogType::Force, "nsyshid.HIDSetReport({},0x{:02x},0x{:02x},...)", hidHandle, reportRelatedUkn,
+		cemuLog_logDebug(LogType::Force, "nsyshid.HIDSetReport({},0x{:02x},0x{:02x},...)", hidHandle, reportType,
 						 reportId);
 
 		_debugPrintHex("HIDSetReport", data, dataLength);
 
 #ifdef CEMU_DEBUG_ASSERT
-		if (reportRelatedUkn != 2 || reportId != 0)
+		if (reportType != 2 || reportId != 0)
 			assert_dbg();
 #endif
 
@@ -501,7 +501,7 @@ namespace nsyshid
 			// synchronous
 			StackAllocator<coreinit::OSEvent> event;
 			coreinit::OSInitEvent(&event, coreinit::OSEvent::EVENT_STATE::STATE_NOT_SIGNALED, coreinit::OSEvent::EVENT_MODE::MODE_AUTO);
-			std::future<sint32> res = std::async(std::launch::async, &_hidSetReportSync, device, reportData,
+			std::future<sint32> res = std::async(std::launch::async, &_hidSetReportSync, device, reportType, reportId, reportData,
 												 paddedLength + 1, data, dataLength, &event);
 			coreinit::OSWaitEvent(&event);
 			returnCode = res.get();
@@ -509,7 +509,7 @@ namespace nsyshid
 		else
 		{
 			// asynchronous
-			std::thread(&_hidSetReportAsync, device, reportData, paddedLength + 1, data, dataLength,
+			std::thread(&_hidSetReportAsync, device, reportType, reportId, reportData, paddedLength + 1, data, dataLength,
 						callbackFuncMPTR, callbackParamMPTR)
 				.detach();
 			returnCode = 0;
