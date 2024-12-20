@@ -449,15 +449,12 @@ namespace nsyshid::backend::libusb
 				this->m_handleInUseCounter = 0;
 			}
 
+			int ret = ClaimAllInterfaces(0);
+
+			if (ret != 0)
 			{
-				for (uint8 i = 0; i < numConfigs; i++)
-				{
-					int ret = ClaimAllInterfaces(i);
-					if (ret != 0)
-					{
-						cemuLog_log(LogType::Force, "nsyshid::DeviceLibusb::open(): cannot claim interface for config {}", i);
-					}
-				}
+				cemuLog_log(LogType::Force, "nsyshid::DeviceLibusb::open(): cannot claim interface for config 0");
+				return false;
 			}
 		}
 
