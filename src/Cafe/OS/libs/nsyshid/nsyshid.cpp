@@ -273,7 +273,7 @@ namespace nsyshid
 	{
 		ppcDefineParamTypePtr(hidClient, HIDClient_t, 0);
 		ppcDefineParamMPTR(callbackFuncMPTR, 1);
-		cemuLog_logDebug(LogType::Force, "nsyshid.HIDAddClient(0x{:08x},0x{:08x})", hCPU->gpr[3], hCPU->gpr[4]);
+		cemuLog_log(LogType::Force, "nsyshid.HIDAddClient(0x{:08x},0x{:08x})", hCPU->gpr[3], hCPU->gpr[4]);
 		hidClient->callbackFunc = callbackFuncMPTR;
 
 		std::lock_guard<std::recursive_mutex> lock(hidMutex);
@@ -291,7 +291,7 @@ namespace nsyshid
 	void export_HIDDelClient(PPCInterpreter_t* hCPU)
 	{
 		ppcDefineParamTypePtr(hidClient, HIDClient_t, 0);
-		cemuLog_logDebug(LogType::Force, "nsyshid.HIDDelClient(0x{:08x})", hCPU->gpr[3]);
+		cemuLog_log(LogType::Force, "nsyshid.HIDDelClient(0x{:08x})", hCPU->gpr[3]);
 
 		std::lock_guard<std::recursive_mutex> lock(hidMutex);
 		DetachClientFromList(hidClient);
