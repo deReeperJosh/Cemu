@@ -273,7 +273,7 @@ namespace nsyshid
 	{
 		ppcDefineParamTypePtr(hidClient, HIDClient_t, 0);
 		ppcDefineParamMPTR(callbackFuncMPTR, 1);
-		cemuLog_logDebug(LogType::Force, "nsyshid.HIDAddClient(0x{:08x},0x{:08x})", hCPU->gpr[3], hCPU->gpr[4]);
+		cemuLog_log(LogType::Force, "nsyshid.HIDAddClient(0x{:08x},0x{:08x})", hCPU->gpr[3], hCPU->gpr[4]);
 		hidClient->callbackFunc = callbackFuncMPTR;
 
 		std::lock_guard<std::recursive_mutex> lock(hidMutex);
@@ -291,7 +291,7 @@ namespace nsyshid
 	void export_HIDDelClient(PPCInterpreter_t* hCPU)
 	{
 		ppcDefineParamTypePtr(hidClient, HIDClient_t, 0);
-		cemuLog_logDebug(LogType::Force, "nsyshid.HIDDelClient(0x{:08x})", hCPU->gpr[3]);
+		cemuLog_log(LogType::Force, "nsyshid.HIDDelClient(0x{:08x})", hCPU->gpr[3]);
 
 		std::lock_guard<std::recursive_mutex> lock(hidMutex);
 		DetachClientFromList(hidClient);
@@ -310,11 +310,14 @@ namespace nsyshid
 		ppcDefineParamU32(hidHandle, 0);	   // r3
 		ppcDefineParamU8(descType, 1);		   // r4
 		ppcDefineParamU8(descIndex, 2);		   // r5
-		ppcDefineParamU8(lang, 3);			   // r6
+		ppcDefineParamU16(lang, 3);			   // r6
 		ppcDefineParamUStr(output, 4);		   // r7
 		ppcDefineParamU32(outputMaxLength, 5); // r8
 		ppcDefineParamMPTR(cbFuncMPTR, 6);	   // r9
 		ppcDefineParamMPTR(cbParamMPTR, 7);	   // r10
+
+		cemuLog_log(LogType::Force, "nsyshid.HIDGetDescriptor(0x{:08x}, 0x{:02x}, 0x{:02x}, 0x{:04x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x})",
+					hCPU->gpr[3], hCPU->gpr[4], hCPU->gpr[5], hCPU->gpr[6], hCPU->gpr[7], hCPU->gpr[8], hCPU->gpr[9], hCPU->gpr[10]);
 
 		int returnValue = -1;
 		std::shared_ptr<Device> device = GetDeviceByHandle(hidHandle, true);
@@ -357,12 +360,14 @@ namespace nsyshid
 	void export_HIDSetIdle(PPCInterpreter_t* hCPU)
 	{
 		ppcDefineParamU32(hidHandle, 0);		  // r3
-		ppcDefineParamU32(ifIndex, 1);			  // r4
-		ppcDefineParamU32(ukn, 2);				  // r5
-		ppcDefineParamU32(duration, 3);			  // r6
+		ppcDefineParamU8(ifIndex, 1);			  // r4
+		ppcDefineParamU8(reportId, 2);			  // r5
+		ppcDefineParamU8(duration, 3);			  // r6
 		ppcDefineParamMPTR(callbackFuncMPTR, 4);  // r7
 		ppcDefineParamMPTR(callbackParamMPTR, 5); // r8
-		cemuLog_logDebug(LogType::Force, "nsyshid.HIDSetIdle(...)");
+
+		cemuLog_log(LogType::Force, "nsyshid.HIDSetIdle(0x{:08x}, 0x{:02x}, 0x{:02x}, 0x{:02x}, 0x{:08x}, 0x{:08x})",
+					hCPU->gpr[3], hCPU->gpr[4], hCPU->gpr[5], hCPU->gpr[6], hCPU->gpr[7], hCPU->gpr[8]);
 
 		// todo
 		if (callbackFuncMPTR)
@@ -383,7 +388,9 @@ namespace nsyshid
 		ppcDefineParamU8(protocol, 2);			  // r5
 		ppcDefineParamMPTR(callbackFuncMPTR, 3);  // r6
 		ppcDefineParamMPTR(callbackParamMPTR, 4); // r7
-		cemuLog_logDebug(LogType::Force, "nsyshid.HIDSetProtocol(...)");
+
+		cemuLog_log(LogType::Force, "nsyshid.HIDSetProtocol(0x{:08x}, 0x{:02x}, 0x{:02x}, 0x{:08x}, 0x{:08x})",
+					hCPU->gpr[3], hCPU->gpr[4], hCPU->gpr[5], hCPU->gpr[6], hCPU->gpr[7]);
 
 		std::shared_ptr<Device> device = GetDeviceByHandle(hidHandle, true);
 		sint32 returnCode = -1;
@@ -461,14 +468,15 @@ namespace nsyshid
 	void export_HIDSetReport(PPCInterpreter_t* hCPU)
 	{
 		ppcDefineParamU32(hidHandle, 0);		  // r3
-		ppcDefineParamU32(reportRelatedUkn, 1);	  // r4
-		ppcDefineParamU32(reportId, 2);			  // r5
+		ppcDefineParamU8(reportRelatedUkn, 1);	  // r4
+		ppcDefineParamU8(reportId, 2);			  // r5
 		ppcDefineParamUStr(data, 3);			  // r6
 		ppcDefineParamU32(dataLength, 4);		  // r7
 		ppcDefineParamMPTR(callbackFuncMPTR, 5);  // r8
 		ppcDefineParamMPTR(callbackParamMPTR, 6); // r9
-		cemuLog_logDebug(LogType::Force, "nsyshid.HIDSetReport({},0x{:02x},0x{:02x},...)", hidHandle, reportRelatedUkn,
-						 reportId);
+
+		cemuLog_log(LogType::Force, "nsyshid.HIDSetReport(0x{:08x}, 0x{:02x}, 0x{:02x}, 0x{:x}, 0x{:08x}, 0x{:08x}, 0x{:08x})",
+					hCPU->gpr[3], hCPU->gpr[4], hCPU->gpr[5], hCPU->gpr[6], hCPU->gpr[7], hCPU->gpr[6], hCPU->gpr[7]);
 
 		_debugPrintHex("HIDSetReport", data, dataLength);
 
@@ -585,7 +593,7 @@ namespace nsyshid
 		ppcDefineParamU32(maxLength, 2);		  // r5
 		ppcDefineParamMPTR(callbackFuncMPTR, 3);  // r6
 		ppcDefineParamMPTR(callbackParamMPTR, 4); // r7
-		cemuLog_logDebug(LogType::Force, "nsyshid.HIDRead(0x{:x},0x{:08x},0x{:08x},0x{:08x},0x{:08x})", hCPU->gpr[3],
+		cemuLog_log(LogType::Force, "nsyshid.HIDRead(0x{:08x},0x{:x},0x{:08x},0x{:08x},0x{:08x})", hCPU->gpr[3],
 						 hCPU->gpr[4], hCPU->gpr[5], hCPU->gpr[6], hCPU->gpr[7]);
 
 		std::shared_ptr<Device> device = GetDeviceByHandle(hidHandle, true);
@@ -682,7 +690,7 @@ namespace nsyshid
 		ppcDefineParamU32(maxLength, 2);		  // r5
 		ppcDefineParamMPTR(callbackFuncMPTR, 3);  // r6
 		ppcDefineParamMPTR(callbackParamMPTR, 4); // r7
-		cemuLog_logDebug(LogType::Force, "nsyshid.HIDWrite(0x{:x},0x{:08x},0x{:08x},0x{:08x},0x{:08x})", hCPU->gpr[3],
+		cemuLog_log(LogType::Force, "nsyshid.HIDWrite(0x{:08x},0x{:x},0x{:08x},0x{:08x},0x{:08x})", hCPU->gpr[3],
 						 hCPU->gpr[4], hCPU->gpr[5], hCPU->gpr[6], hCPU->gpr[7]);
 
 		std::shared_ptr<Device> device = GetDeviceByHandle(hidHandle, true);
