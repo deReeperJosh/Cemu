@@ -499,7 +499,7 @@ namespace nsyshid
 		return response;
 	}
 
-	void InfinityUSB::SendCommand(uint8* buf, sint32 originalLength)
+	void InfinityUSB::SendCommand(uint8* buf, uint32 length)
 	{
 		const uint8 command = buf[2];
 		const uint8 sequence = buf[3];

@@ -57,7 +57,7 @@ namespace nsyshid
 			void Save();
 		};
 
-		void SendCommand(uint8* buf, sint32 originalLength);
+		void SendCommand(uint8* buf, uint32 length);
 		std::array<uint8, 32> GetStatus();
 
 		void GetBlankResponse(uint8 sequence, std::array<uint8, 32>& replyBuf);

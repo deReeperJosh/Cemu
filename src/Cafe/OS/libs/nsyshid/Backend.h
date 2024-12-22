@@ -26,9 +26,9 @@ namespace nsyshid
 	struct TransferCommand
 	{
 		uint8* data;
-		sint32 length;
+		uint32 length;
 
-		TransferCommand(uint8* data, sint32 length)
+		TransferCommand(uint8* data, uint32 length)
 			: data(data), length(length)
 		{
 		}
@@ -39,7 +39,7 @@ namespace nsyshid
 	{
 		sint32 bytesRead;
 
-		ReadMessage(uint8* data, sint32 length, sint32 bytesRead)
+		ReadMessage(uint8* data, uint32 length, sint32 bytesRead)
 			: bytesRead(bytesRead), TransferCommand(data, length)
 		{
 		}
@@ -50,7 +50,7 @@ namespace nsyshid
 	{
 		sint32 bytesWritten;
 
-		WriteMessage(uint8* data, sint32 length, sint32 bytesWritten)
+		WriteMessage(uint8* data, uint32 length, sint32 bytesWritten)
 			: bytesWritten(bytesWritten), TransferCommand(data, length)
 		{
 		}
@@ -61,14 +61,9 @@ namespace nsyshid
 	{
 		uint8 reportType;
 		uint8 reportId;
-		uint8* reportData;
-		sint32 length;
-		uint8* originalData;
-		sint32 originalLength;
 
-		ReportMessage(uint8 reportType, uint8 reportId, uint8* reportData, sint32 length, uint8* originalData, sint32 originalLength)
-			: reportType(reportType), reportId(reportId), reportData(reportData), length(length), originalData(originalData),
-			  originalLength(originalLength), TransferCommand(reportData, length)
+		ReportMessage(uint8 reportType, uint8 reportId, uint8* data, uint32 length)
+			: reportType(reportType), reportId(reportId), TransferCommand(data, length)
 		{
 		}
 		using TransferCommand::TransferCommand;
@@ -79,7 +74,8 @@ namespace nsyshid
 	static_assert(offsetof(HID_t, ifIndex) == 0xC, "");
 	static_assert(offsetof(HID_t, protocol) == 0xE, "");
 
-	class Device {
+	class Device
+	{
 	  public:
 		Device() = delete;
 
@@ -146,7 +142,8 @@ namespace nsyshid
 		virtual bool SetReport(ReportMessage* message) = 0;
 	};
 
-	class Backend {
+	class Backend
+	{
 	  public:
 		Backend();
 

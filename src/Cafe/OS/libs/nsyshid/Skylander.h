@@ -74,7 +74,7 @@ namespace nsyshid
 			uint8 blue = 0;
 		};
 
-		void ControlTransfer(uint8* buf, sint32 originalLength);
+		void ControlTransfer(uint8* buf, uint32 length);
 
 		void Activate();
 		void Deactivate();

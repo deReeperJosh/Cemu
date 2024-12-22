@@ -579,6 +579,11 @@ namespace nsyshid::backend::libusb
 
 		uint16 wValue = uint16(descType) << 8 | uint16(descIndex);
 
+		if(!outputMaxLength && 0xFF)
+		{
+			outputMaxLength >>= 8;
+		}
+
 		// HID Get_Descriptor requests are handled via libusb_control_transfer
 		int ret = libusb_control_transfer(handleLock->GetHandle(),
 										  LIBUSB_REQUEST_TYPE_STANDARD | LIBUSB_ENDPOINT_IN,
@@ -586,7 +591,7 @@ namespace nsyshid::backend::libusb
 										  wValue,
 										  lang,
 										  output,
-										  outputMaxLength,
+										  uint16(outputMaxLength & 0xFFFF),
 										  0);
 
 		if (ret != outputMaxLength)
@@ -732,11 +737,11 @@ namespace nsyshid::backend::libusb
 										  HID_CLASS_SET_REPORT, // Defined in HID Class Specific Requests (7.2)
 										  wValue,
 										  m_interfaceIndex,
-										  message->originalData,
-										  message->originalLength,
+										  message->data,
+										  uint16(message->length & 0xFFFF),
 										  0);
 
-		if (ret != message->originalLength)
+		if (ret != message->length)
 		{
 			cemuLog_log(LogType::Force, "nsyshid::DeviceLibusb::SetReport(): Control Transfer Failed at interface {} : {}", m_interfaceIndex, libusb_error_name(ret));
 			return false;

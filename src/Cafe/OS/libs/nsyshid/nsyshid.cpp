@@ -565,20 +565,19 @@ namespace nsyshid
 	}
 
 	// handler for async HIDSetReport transfers
-	void _hidSetReportAsync(std::shared_ptr<Device> device, uint8 reportType, uint8 reportId, uint8* reportData, sint32 length,
-							uint8* originalData,
-							sint32 originalLength, MPTR callbackFuncMPTR, MPTR callbackParamMPTR)
+	void _hidSetReportAsync(std::shared_ptr<Device> device, uint8 reportType, uint8 reportId, uint8* data, uint32 length,
+							MPTR callbackFuncMPTR, MPTR callbackParamMPTR)
 	{
 		cemuLog_logDebug(LogType::Force, "_hidSetReportAsync begin");
-		ReportMessage message(reportType, reportId, reportData, length, originalData, originalLength);
+		ReportMessage message(reportType, reportId, data, length);
 		if (device->SetReport(&message))
 		{
 			DoHIDTransferCallback(callbackFuncMPTR,
 								  callbackParamMPTR,
 								  device->m_hid->handle,
 								  0,
-								  memory_getVirtualOffsetFromPointer(originalData),
-								  originalLength);
+								  memory_getVirtualOffsetFromPointer(data),
+								  length);
 		}
 		else
 		{
@@ -586,24 +585,22 @@ namespace nsyshid
 								  callbackParamMPTR,
 								  device->m_hid->handle,
 								  -1,
-								  memory_getVirtualOffsetFromPointer(originalData),
-								  0);
+								  memory_getVirtualOffsetFromPointer(data),
+								  length);
 		}
-		free(reportData);
 	}
 
 	// handler for synchronous HIDSetReport transfers
-	sint32 _hidSetReportSync(std::shared_ptr<Device> device, uint8 reportType, uint8 reportId, uint8* reportData, sint32 length,
-							 uint8* originalData, sint32 originalLength, coreinit::OSEvent* event)
+	sint32 _hidSetReportSync(std::shared_ptr<Device> device, uint8 reportType, uint8 reportId,
+							 uint8* data, uint32 length, coreinit::OSEvent* event)
 	{
-		_debugPrintHex("_hidSetReportSync Begin", reportData, length);
+		_debugPrintHex("_hidSetReportSync Begin", data, length);
 		sint32 returnCode = 0;
-		ReportMessage message(reportType, reportId, reportData, length, originalData, originalLength);
+		ReportMessage message(reportType, reportId, data, length);
 		if (device->SetReport(&message))
 		{
-			returnCode = originalLength;
+			returnCode = length;
 		}
-		free(reportData);
 		cemuLog_logDebug(LogType::Force, "_hidSetReportSync end. returnCode: {}", returnCode);
 		coreinit::OSSignalEvent(event);
 		return returnCode;
@@ -636,15 +633,6 @@ namespace nsyshid
 			return;
 		}
 
-		// prepare report data
-		// note: Currently we need to pad the data to 0x20 bytes for it to work (plus one extra byte for HidD_SetOutputReport)
-		// Does IOSU pad data to 0x20 byte? Also check if this is specific to Skylanders portal
-		sint32 paddedLength = (dataLength + 0x1F) & ~0x1F;
-		uint8* reportData = (uint8*)malloc(paddedLength + 1);
-		memset(reportData, 0, paddedLength + 1);
-		reportData[0] = 0;
-		memcpy(reportData + 1, data, dataLength);
-
 		// issue request (synchronous or asynchronous)
 		sint32 returnCode = 0;
 		if (callbackFuncMPTR == MPTR_NULL)
@@ -652,15 +640,14 @@ namespace nsyshid
 			// synchronous
 			StackAllocator<coreinit::OSEvent> event;
 			coreinit::OSInitEvent(&event, coreinit::OSEvent::EVENT_STATE::STATE_NOT_SIGNALED, coreinit::OSEvent::EVENT_MODE::MODE_AUTO);
-			std::future<sint32> res = std::async(std::launch::async, &_hidSetReportSync, device, reportType, reportId, reportData,
-												 paddedLength + 1, data, dataLength, &event);
+			std::future<sint32> res = std::async(std::launch::async, &_hidSetReportSync, device, reportType, reportId, data, dataLength, &event);
 			coreinit::OSWaitEvent(&event);
 			returnCode = res.get();
 		}
 		else
 		{
 			// asynchronous
-			std::thread(&_hidSetReportAsync, device, reportType, reportId, reportData, paddedLength + 1, data, dataLength,
+			std::thread(&_hidSetReportAsync, device, reportType, reportId, data, dataLength,
 						callbackFuncMPTR, callbackParamMPTR)
 				.detach();
 			returnCode = 0;

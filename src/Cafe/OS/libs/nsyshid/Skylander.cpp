@@ -641,12 +641,12 @@ namespace nsyshid
 
 	bool SkylanderPortalDevice::SetReport(ReportMessage* message)
 	{
-		g_skyportal.ControlTransfer(message->originalData, message->originalLength);
+		g_skyportal.ControlTransfer(message->data, message->length);
 		std::this_thread::sleep_for(std::chrono::milliseconds(1));
 		return true;
 	}
 
-	void SkylanderUSB::ControlTransfer(uint8* buf, sint32 originalLength)
+	void SkylanderUSB::ControlTransfer(uint8* buf, uint32 length)
 	{
 		std::array<uint8, 64> interruptResponse = {};
 		switch (buf[0])
