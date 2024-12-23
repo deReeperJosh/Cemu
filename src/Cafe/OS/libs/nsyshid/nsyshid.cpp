@@ -366,16 +366,6 @@ namespace nsyshid
 		}
 	}
 
-	sint32 _hidGetDescriptorSync(std::shared_ptr<Device> device, uint8 descType, uint8 descIndex, uint16 lang, uint8* output, uint32 outputMaxLength, coreinit::OSEvent* event)
-	{
-		sint32 returnCode = -1;
-		if (device->GetDescriptor(descType, descIndex, lang, output, outputMaxLength))
-		{
-			returnCode = 0;
-		}
-		coreinit::OSSignalEvent(event);
-		return returnCode;
-	}
 
 	void export_HIDGetDescriptor(PPCInterpreter_t* hCPU)
 	{
@@ -387,8 +377,8 @@ namespace nsyshid
 		ppcDefineParamU32(outputMaxLength, 5); // r8
 		ppcDefineParamMPTR(cbFuncMPTR, 6);	   // r9
 		ppcDefineParamMPTR(cbParamMPTR, 7);	   // r10
-		cemuLog_log(LogType::Force, "nsyshid.HIDGetDescriptor(0x{:08x}, 0x{:02x}, 0x{:02x}, 0x{:04x}, 0x{:x}, 0x{:08x}, 0x{:08x}, 0x{:08x})", hCPU->gpr[3],
-					hCPU->gpr[4], hCPU->gpr[5], hCPU->gpr[6], hCPU->gpr[7], hCPU->gpr[8], hCPU->gpr[9], hCPU->gpr[10]);
+		cemuLog_log(LogType::Force, "nsyshid.HIDGetDescriptor(0x{:08x}, 0x{:02x}, 0x{:02x}, 0x{:04x}, 0x{:x}, 0x{:08x}, 0x{:08x}, 0x{:08x})",
+					hCPU->gpr[3], hCPU->gpr[4], hCPU->gpr[5], hCPU->gpr[6], hCPU->gpr[7], hCPU->gpr[8], hCPU->gpr[9], hCPU->gpr[10]);
 
 		int returnValue = -1;
 		std::shared_ptr<Device> device = GetDeviceByHandle(hidHandle, true);
@@ -404,11 +394,11 @@ namespace nsyshid
 		if (cbFuncMPTR == MPTR_NULL)
 		{
 			// synchronous
-			StackAllocator<coreinit::OSEvent> event;
-			coreinit::OSInitEvent(&event, coreinit::OSEvent::EVENT_STATE::STATE_NOT_SIGNALED, coreinit::OSEvent::EVENT_MODE::MODE_AUTO);
-			std::future<sint32> res = std::async(std::launch::async, &_hidGetDescriptorSync, device, descType, descIndex, lang, output, outputMaxLength, &event);
-			coreinit::OSWaitEvent(&event);
-			returnCode = res.get();
+			returnCode = -1;
+			if (device->GetDescriptor(descType, descIndex, lang, output, outputMaxLength))
+			{
+				returnCode = 0;
+			}
 		}
 		else
 		{
