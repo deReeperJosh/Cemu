@@ -576,14 +576,14 @@ namespace nsyshid
 		currentWritePtr = configurationDescriptor + 0;
 		*(uint8*)(currentWritePtr + 0) = 9;			// bLength
 		*(uint8*)(currentWritePtr + 1) = 2;			// bDescriptorType
-		*(uint16le*)(currentWritePtr + 2) = 0x0029; // wTotalLength
+		*(uint16be*)(currentWritePtr + 2) = 0x0029; // wTotalLength
 		*(uint8*)(currentWritePtr + 4) = 1;			// bNumInterfaces
 		*(uint8*)(currentWritePtr + 5) = 1;			// bConfigurationValue
 		*(uint8*)(currentWritePtr + 6) = 0;			// iConfiguration
 		*(uint8*)(currentWritePtr + 7) = 0x80;		// bmAttributes
 		*(uint8*)(currentWritePtr + 8) = 0xFA;		// MaxPower
 		currentWritePtr = currentWritePtr + 9;
-		// configuration descriptor
+		// interface descriptor
 		*(uint8*)(currentWritePtr + 0) = 9;	   // bLength
 		*(uint8*)(currentWritePtr + 1) = 0x04; // bDescriptorType
 		*(uint8*)(currentWritePtr + 2) = 0;	   // bInterfaceNumber
@@ -594,21 +594,21 @@ namespace nsyshid
 		*(uint8*)(currentWritePtr + 7) = 0;	   // bInterfaceProtocol
 		*(uint8*)(currentWritePtr + 8) = 0;	   // iInterface
 		currentWritePtr = currentWritePtr + 9;
-		// configuration descriptor
+		// HID descriptor
 		*(uint8*)(currentWritePtr + 0) = 9;			// bLength
 		*(uint8*)(currentWritePtr + 1) = 0x21;		// bDescriptorType
-		*(uint16le*)(currentWritePtr + 2) = 0x0111; // bcdHID
+		*(uint16be*)(currentWritePtr + 2) = 0x0111; // bcdHID
 		*(uint8*)(currentWritePtr + 4) = 0x00;		// bCountryCode
 		*(uint8*)(currentWritePtr + 5) = 0x01;		// bNumDescriptors
 		*(uint8*)(currentWritePtr + 6) = 0x22;		// bDescriptorType
-		*(uint16le*)(currentWritePtr + 7) = 0x001D; // wDescriptorLength
+		*(uint16be*)(currentWritePtr + 7) = 0x001D; // wDescriptorLength
 		currentWritePtr = currentWritePtr + 9;
 		// endpoint descriptor 1
 		*(uint8*)(currentWritePtr + 0) = 7;		  // bLength
 		*(uint8*)(currentWritePtr + 1) = 0x05;	  // bDescriptorType
 		*(uint8*)(currentWritePtr + 2) = 0x81;	  // bEndpointAddress
 		*(uint8*)(currentWritePtr + 3) = 0x03;	  // bmAttributes
-		*(uint16le*)(currentWritePtr + 4) = 0x0040; // wMaxPacketSize
+		*(uint16be*)(currentWritePtr + 4) = 0x0040; // wMaxPacketSize
 		*(uint8*)(currentWritePtr + 6) = 0x01;	  // bInterval
 		currentWritePtr = currentWritePtr + 7;
 		// endpoint descriptor 2
@@ -616,7 +616,7 @@ namespace nsyshid
 		*(uint8*)(currentWritePtr + 1) = 0x05;	  // bDescriptorType
 		*(uint8*)(currentWritePtr + 2) = 0x02;	  // bEndpointAddress
 		*(uint8*)(currentWritePtr + 3) = 0x03;	  // bmAttributes
-		*(uint16le*)(currentWritePtr + 4) = 0x0040; // wMaxPacketSize
+		*(uint16be*)(currentWritePtr + 4) = 0x0040; // wMaxPacketSize
 		*(uint8*)(currentWritePtr + 6) = 0x01;	  // bInterval
 		currentWritePtr = currentWritePtr + 7;
 

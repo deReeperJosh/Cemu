@@ -1,6 +1,6 @@
 #include "BackendLibusb.h"
 
-#if NSYSHID_ENABLE_BACKEND_LIBUSB
+#if 1
 
 namespace nsyshid::backend::libusb
 {
@@ -577,27 +577,133 @@ namespace nsyshid::backend::libusb
 			return false;
 		}
 
-		uint16 wValue = uint16(descType) << 8 | uint16(descIndex);
-
-		if(!outputMaxLength && 0xFF)
+		if (descType == 0x02)
 		{
-			outputMaxLength >>= 8;
+			struct libusb_config_descriptor* conf = nullptr;
+			libusb_device* dev = libusb_get_device(handleLock->GetHandle());
+			int ret = libusb_get_active_config_descriptor(dev, &conf);
+			if (ret == 0)
+			{
+				std::vector<uint8> configurationDescriptor(conf->wTotalLength);
+				uint8* currentWritePtr = &configurationDescriptor[0];
+
+				// configuration descriptor
+				cemu_assert_debug(conf->bLength == LIBUSB_DT_CONFIG_SIZE);
+				*(uint8*)(currentWritePtr + 0) = conf->bLength;				// bLength
+				*(uint8*)(currentWritePtr + 1) = conf->bDescriptorType;		// bDescriptorType
+				*(uint16be*)(currentWritePtr + 2) = conf->wTotalLength;		// wTotalLength
+				*(uint8*)(currentWritePtr + 4) = conf->bNumInterfaces;		// bNumInterfaces
+				*(uint8*)(currentWritePtr + 5) = conf->bConfigurationValue; // bConfigurationValue
+				*(uint8*)(currentWritePtr + 6) = conf->iConfiguration;		// iConfiguration
+				*(uint8*)(currentWritePtr + 7) = conf->bmAttributes;		// bmAttributes
+				*(uint8*)(currentWritePtr + 8) = conf->MaxPower;			// MaxPower
+				currentWritePtr = currentWritePtr + conf->bLength;
+
+				for (uint8_t interfaceIndex = 0; interfaceIndex < conf->bNumInterfaces; interfaceIndex++)
+				{
+					const struct libusb_interface& interface = conf->interface[interfaceIndex];
+					for (int altsettingIndex = 0; altsettingIndex < interface.num_altsetting; altsettingIndex++)
+					{
+						// interface descriptor
+						const struct libusb_interface_descriptor& altsetting = interface.altsetting[altsettingIndex];
+						cemu_assert_debug(altsetting.bLength == LIBUSB_DT_INTERFACE_SIZE);
+						*(uint8*)(currentWritePtr + 0) = altsetting.bLength;			// bLength
+						*(uint8*)(currentWritePtr + 1) = altsetting.bDescriptorType;	// bDescriptorType
+						*(uint8*)(currentWritePtr + 2) = altsetting.bInterfaceNumber;	// bInterfaceNumber
+						*(uint8*)(currentWritePtr + 3) = altsetting.bAlternateSetting;	// bAlternateSetting
+						*(uint8*)(currentWritePtr + 4) = altsetting.bNumEndpoints;		// bNumEndpoints
+						*(uint8*)(currentWritePtr + 5) = altsetting.bInterfaceClass;	// bInterfaceClass
+						*(uint8*)(currentWritePtr + 6) = altsetting.bInterfaceSubClass; // bInterfaceSubClass
+						*(uint8*)(currentWritePtr + 7) = altsetting.bInterfaceProtocol; // bInterfaceProtocol
+						*(uint8*)(currentWritePtr + 8) = altsetting.iInterface;			// iInterface
+						currentWritePtr = currentWritePtr + altsetting.bLength;
+
+						if (altsetting.extra_length > 0)
+						{
+							// unknown descriptors - copy the ones that we can identify ourselves
+							const unsigned char* extraReadPointer = altsetting.extra;
+							while (extraReadPointer - altsetting.extra < altsetting.extra_length)
+							{
+								uint8 bLength = *(uint8*)(extraReadPointer + 0);
+								if (bLength == 0)
+								{
+									// prevent endless loop
+									break;
+								}
+								if (extraReadPointer + bLength - altsetting.extra > altsetting.extra_length)
+								{
+									// prevent out of bounds read
+									break;
+								}
+								uint8 bDescriptorType = *(uint8*)(extraReadPointer + 1);
+								// HID descriptor
+								if (bDescriptorType == LIBUSB_DT_HID && bLength == 9)
+								{
+									*(uint8*)(currentWritePtr + 0) =
+										*(uint8*)(extraReadPointer + 0); // bLength
+									*(uint8*)(currentWritePtr + 1) =
+										*(uint8*)(extraReadPointer + 1); // bDescriptorType
+									*(uint16be*)(currentWritePtr + 2) =
+										*(uint16*)(extraReadPointer + 2); // bcdHID
+									*(uint8*)(currentWritePtr + 4) =
+										*(uint8*)(extraReadPointer + 4); // bCountryCode
+									*(uint8*)(currentWritePtr + 5) =
+										*(uint8*)(extraReadPointer + 5); // bNumDescriptors
+									*(uint8*)(currentWritePtr + 6) =
+										*(uint8*)(extraReadPointer + 6); // bDescriptorType
+									*(uint16be*)(currentWritePtr + 7) =
+										*(uint16*)(extraReadPointer + 7); // wDescriptorLength
+									currentWritePtr += bLength;
+								}
+								extraReadPointer += bLength;
+							}
+						}
+						for (int endpointIndex = 0; endpointIndex < altsetting.bNumEndpoints; endpointIndex++)
+						{
+							// endpoint descriptor
+							const struct libusb_endpoint_descriptor& endpoint = altsetting.endpoint[endpointIndex];
+							cemu_assert_debug(endpoint.bLength == LIBUSB_DT_ENDPOINT_SIZE ||
+											  endpoint.bLength == LIBUSB_DT_ENDPOINT_AUDIO_SIZE);
+							*(uint8*)(currentWritePtr + 0) = endpoint.bLength;
+							*(uint8*)(currentWritePtr + 1) = endpoint.bDescriptorType;
+							*(uint8*)(currentWritePtr + 2) = endpoint.bEndpointAddress;
+							*(uint8*)(currentWritePtr + 3) = endpoint.bmAttributes;
+							*(uint16be*)(currentWritePtr + 4) = endpoint.wMaxPacketSize;
+							*(uint8*)(currentWritePtr + 6) = endpoint.bInterval;
+							if (endpoint.bLength == LIBUSB_DT_ENDPOINT_AUDIO_SIZE)
+							{
+								*(uint8*)(currentWritePtr + 7) = endpoint.bRefresh;
+								*(uint8*)(currentWritePtr + 8) = endpoint.bSynchAddress;
+							}
+							currentWritePtr += endpoint.bLength;
+						}
+					}
+				}
+				uint32 bytesWritten = currentWritePtr - &configurationDescriptor[0];
+				libusb_free_config_descriptor(conf);
+				cemu_assert_debug(bytesWritten <= conf->wTotalLength);
+				memcpy(output, &configurationDescriptor[0],
+					   std::min<uint32>(outputMaxLength, bytesWritten));
+				return true;
+			}
 		}
-
-		// HID Get_Descriptor requests are handled via libusb_control_transfer
-		int ret = libusb_control_transfer(handleLock->GetHandle(),
-										  LIBUSB_REQUEST_TYPE_STANDARD | LIBUSB_ENDPOINT_IN,
-										  LIBUSB_REQUEST_GET_DESCRIPTOR,
-										  wValue,
-										  lang,
-										  output,
-										  uint16(outputMaxLength & 0xFFFF),
-										  0);
-
-		if (ret != outputMaxLength)
+		else
 		{
-			cemuLog_log(LogType::Force, "nsyshid::DeviceLibusb::GetDescriptor(): Control Transfer Failed: {}", libusb_error_name(ret));
-			return false;
+			uint16 wValue = uint16(descType) << 8 | uint16(descIndex);
+			// HID Get_Descriptor requests are handled via libusb_control_transfer
+			int ret = libusb_control_transfer(handleLock->GetHandle(),
+											  LIBUSB_REQUEST_TYPE_STANDARD | LIBUSB_ENDPOINT_IN,
+											  LIBUSB_REQUEST_GET_DESCRIPTOR,
+											  wValue,
+											  lang,
+											  output,
+											  outputMaxLength,
+											  0);
+			if (ret != outputMaxLength)
+			{
+				cemuLog_log(LogType::Force, "nsyshid::DeviceLibusb::GetDescriptor(): Control Transfer Failed: {}", libusb_error_name(ret));
+				return false;
+			}
 		}
 		return true;
 	}

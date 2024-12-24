@@ -366,7 +366,6 @@ namespace nsyshid
 		}
 	}
 
-
 	void export_HIDGetDescriptor(PPCInterpreter_t* hCPU)
 	{
 		ppcDefineParamU32(hidHandle, 0);	   // r3
@@ -380,7 +379,6 @@ namespace nsyshid
 		cemuLog_log(LogType::Force, "nsyshid.HIDGetDescriptor(0x{:08x}, 0x{:02x}, 0x{:02x}, 0x{:04x}, 0x{:x}, 0x{:08x}, 0x{:08x}, 0x{:08x})",
 					hCPU->gpr[3], hCPU->gpr[4], hCPU->gpr[5], hCPU->gpr[6], hCPU->gpr[7], hCPU->gpr[8], hCPU->gpr[9], hCPU->gpr[10]);
 
-		int returnValue = -1;
 		std::shared_ptr<Device> device = GetDeviceByHandle(hidHandle, true);
 		if (device == nullptr)
 		{
@@ -397,7 +395,7 @@ namespace nsyshid
 			returnCode = -1;
 			if (device->GetDescriptor(descType, descIndex, lang, output, outputMaxLength))
 			{
-				returnCode = 0;
+				returnCode = outputMaxLength;
 			}
 		}
 		else
@@ -432,17 +430,6 @@ namespace nsyshid
 		}
 	}
 
-	sint32 _hidSetIdleSync(std::shared_ptr<Device> device, uint8 ifIndex, uint8 reportId, uint8 duration, coreinit::OSEvent* event)
-	{
-		sint32 returnCode = -1;
-		if (device->SetIdle(ifIndex, reportId, duration))
-		{
-			returnCode = 0;
-		}
-		coreinit::OSSignalEvent(event);
-		return returnCode;
-	}
-
 	void export_HIDSetIdle(PPCInterpreter_t* hCPU)
 	{
 		ppcDefineParamU32(hidHandle, 0);		  // r3
@@ -467,11 +454,11 @@ namespace nsyshid
 		if (callbackFuncMPTR == MPTR_NULL)
 		{
 			// synchronous
-			StackAllocator<coreinit::OSEvent> event;
-			coreinit::OSInitEvent(&event, coreinit::OSEvent::EVENT_STATE::STATE_NOT_SIGNALED, coreinit::OSEvent::EVENT_MODE::MODE_AUTO);
-			std::future<sint32> res = std::async(std::launch::async, &_hidSetIdleSync, device, ifIndex, reportId, duration, &event);
-			coreinit::OSWaitEvent(&event);
-			returnCode = res.get();
+			returnCode = -1;
+			if (device->SetIdle(ifIndex, reportId, duration))
+			{
+				returnCode = 0;
+			}
 		}
 		else
 		{
@@ -505,17 +492,6 @@ namespace nsyshid
 		}
 	}
 
-	sint32 _hidSetProtocolSync(std::shared_ptr<Device> device, uint8 ifIndex, uint8 protocol, coreinit::OSEvent* event)
-	{
-		sint32 returnCode = -1;
-		if (device->SetProtocol(ifIndex, protocol))
-		{
-			returnCode = 0;
-		}
-		coreinit::OSSignalEvent(event);
-		return returnCode;
-	}
-
 	void export_HIDSetProtocol(PPCInterpreter_t* hCPU)
 	{
 		ppcDefineParamU32(hidHandle, 0);		  // r3
@@ -538,11 +514,11 @@ namespace nsyshid
 		if (callbackFuncMPTR == MPTR_NULL)
 		{
 			// synchronous
-			StackAllocator<coreinit::OSEvent> event;
-			coreinit::OSInitEvent(&event, coreinit::OSEvent::EVENT_STATE::STATE_NOT_SIGNALED, coreinit::OSEvent::EVENT_MODE::MODE_AUTO);
-			std::future<sint32> res = std::async(std::launch::async, &_hidSetProtocolSync, device, ifIndex, protocol, &event);
-			coreinit::OSWaitEvent(&event);
-			returnCode = res.get();
+			returnCode = -1;
+			if (device->SetProtocol(ifIndex, protocol))
+			{
+				returnCode = 0;
+			}
 		}
 		else
 		{
