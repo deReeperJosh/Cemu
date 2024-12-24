@@ -1,9 +1,4 @@
-#ifndef CEMU_NSYSHID_BACKEND_LIBUSB_H
-#define CEMU_NSYSHID_BACKEND_LIBUSB_H
-
 #include "nsyshid.h"
-
-#if NSYSHID_ENABLE_BACKEND_LIBUSB
 
 #include <libusb-1.0/libusb.h>
 #include "Backend.h"
@@ -148,7 +143,3 @@ namespace nsyshid::backend::libusb
 		std::unique_ptr<HandleLock> AquireHandleLock();
 	};
 } // namespace nsyshid::backend::libusb
-
-#endif // NSYSHID_ENABLE_BACKEND_LIBUSB
-
-#endif // CEMU_NSYSHID_BACKEND_LIBUSB_H

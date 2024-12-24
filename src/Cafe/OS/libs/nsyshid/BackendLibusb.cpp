@@ -1,7 +1,5 @@
 #include "BackendLibusb.h"
 
-#if NSYSHID_ENABLE_BACKEND_LIBUSB
-
 namespace nsyshid::backend::libusb
 {
 	BackendLibusb::BackendLibusb()
@@ -912,5 +910,3 @@ namespace nsyshid::backend::libusb
 		return m_handle;
 	}
 } // namespace nsyshid::backend::libusb
-
-#endif // NSYSHID_ENABLE_BACKEND_LIBUSB

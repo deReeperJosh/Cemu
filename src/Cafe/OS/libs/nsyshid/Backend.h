@@ -1,5 +1,4 @@
-#ifndef CEMU_NSYSHID_BACKEND_H
-#define CEMU_NSYSHID_BACKEND_H
+#pragma once
 
 #include <list>
 #include <memory>
@@ -191,5 +190,3 @@ namespace nsyshid
 		void AttachDefaultBackends();
 	}
 } // namespace nsyshid
-
-#endif // CEMU_NSYSHID_BACKEND_H
