@@ -1,6 +1,6 @@
 #include "BackendLibusb.h"
 
-#if 1
+#if NSYSHID_ENABLE_BACKEND_LIBUSB
 
 namespace nsyshid::backend::libusb
 {
@@ -500,6 +500,11 @@ namespace nsyshid::backend::libusb
 			return ReadResult::Error;
 		}
 
+		for (int i = 0; i < m_config_descriptors.size(); i++)
+		{
+			ClaimAllInterfaces(i);
+		}
+
 		const unsigned int timeout = 50;
 		int actualLength = 0;
 		int ret = 0;
@@ -537,6 +542,11 @@ namespace nsyshid::backend::libusb
 			cemuLog_log(LogType::Force,
 						"nsyshid::DeviceLibusb::write(): cannot write to a non-opened device\n");
 			return WriteResult::Error;
+		}
+
+		for (int i = 0; i < m_config_descriptors.size(); i++)
+		{
+			ClaimAllInterfaces(i);
 		}
 
 		message->bytesWritten = 0;
