@@ -445,7 +445,9 @@ namespace nsyshid
 		fileData[8] = 0x44;
 		fileData[10] = 0xc2;
 
-		std::array<uint8, 16> figureData = {uint8(dist(mt)), 0x03, 0x00, 0x00, 0x01, 0x0e, 0x0a, 0x0a, 0x10, type, 0x01, id};
+		uint8 identifier = type == 0x00 ? 0x04 : 0x03;
+
+		std::array<uint8, 16> figureData = {uint8(dist(mt)), identifier, 0x00, 0x00, 0x01, 0x0e, 0x0a, 0x0a, 0x10, type, 0x01, id};
 		uint32 checksum = SummonrideCRC32(figureData);
 		for (sint8 i = 3; i >= 0; i--)
 		{

@@ -971,11 +971,12 @@ CreateKamenRiderDialog::CreateKamenRiderDialog(wxWindow* parent, uint8 slot)
 	auto* labelId = new wxStaticText(this, wxID_ANY, "ID:");
 	auto* typeCombo = new wxComboBox(this, wxID_ANY);
 	typeCombo->Append("---Select---", reinterpret_cast<void*>(0xFF));
-	typeCombo->Append("Grass", reinterpret_cast<void*>(0x10));
+	typeCombo->Append("Ride Chip", reinterpret_cast<void*>(0x00));
+	typeCombo->Append("Wind", reinterpret_cast<void*>(0x10));
 	typeCombo->Append("Water", reinterpret_cast<void*>(0x20));
 	typeCombo->Append("Fire", reinterpret_cast<void*>(0x30));
 	typeCombo->Append("Light", reinterpret_cast<void*>(0x40));
-	typeCombo->Append("Dark", reinterpret_cast<void*>(0x50));
+	typeCombo->Append("Darkness", reinterpret_cast<void*>(0x50));
 	typeCombo->SetSelection(0);
 	auto* editId = new wxTextCtrl(this, wxID_ANY, _("0"), wxDefaultPosition, wxDefaultSize, 0, validator);
 

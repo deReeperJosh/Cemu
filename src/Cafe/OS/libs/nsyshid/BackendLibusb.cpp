@@ -488,6 +488,39 @@ namespace nsyshid::backend::libusb
 		return m_libusbHandle != nullptr && m_handleInUseCounter >= 0;
 	}
 
+	std::string HexDump(const uint8* data, size_t size)
+	{
+		constexpr size_t BYTES_PER_LINE = 16;
+
+		std::string out;
+		for (size_t row_start = 0; row_start < size; row_start += BYTES_PER_LINE)
+		{
+			out += fmt::format("{:06x}: ", row_start);
+			for (size_t i = 0; i < BYTES_PER_LINE; ++i)
+			{
+				if (row_start + i < size)
+				{
+					out += fmt::format("{:02x} ", data[row_start + i]);
+				}
+				else
+				{
+					out += "   ";
+				}
+			}
+			out += " ";
+			for (size_t i = 0; i < BYTES_PER_LINE; ++i)
+			{
+				if (row_start + i < size)
+				{
+					char c = static_cast<char>(data[row_start + i]);
+					out += std::isprint(c, std::locale::classic()) ? c : '.';
+				}
+			}
+			out += "\n";
+		}
+		return out;
+	}
+
 	Device::ReadResult DeviceLibusb::Read(ReadMessage* message)
 	{
 		auto handleLock = AquireHandleLock();
@@ -505,7 +538,7 @@ namespace nsyshid::backend::libusb
 
 		const unsigned int timeout = 50;
 		int actualLength = 0;
-		int ret = 0;
+		int ret = -1;
 		do
 		{
 			ret = libusb_interrupt_transfer(handleLock->GetHandle(),
@@ -513,9 +546,9 @@ namespace nsyshid::backend::libusb
 											message->data,
 											message->length,
 											&actualLength,
-											timeout);
+											0);
 		}
-		while (ret == LIBUSB_ERROR_TIMEOUT && actualLength == 0 && IsOpened());
+		while (ret != LIBUSB_SUCCESS && actualLength == 0 && IsOpened());
 
 		if (ret == 0 || ret == LIBUSB_ERROR_TIMEOUT)
 		{
@@ -523,6 +556,8 @@ namespace nsyshid::backend::libusb
 			cemuLog_logDebug(LogType::Force, "nsyshid::DeviceLibusb::read(): read {} of {} bytes",
 							 actualLength,
 							 message->length);
+
+			cemuLog_log(LogType::Force, "Ride gate read: \n{}", HexDump(message->data, message->length));
 			message->bytesRead = actualLength;
 			return ReadResult::Success;
 		}
@@ -546,6 +581,8 @@ namespace nsyshid::backend::libusb
 		{
 			ClaimAllInterfaces(i);
 		}
+
+		cemuLog_log(LogType::Force, "Ride gate write: \n{}", HexDump(message->data, message->length));
 
 		message->bytesWritten = 0;
 		int actualLength = 0;
