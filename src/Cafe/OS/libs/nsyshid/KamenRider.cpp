@@ -468,6 +468,8 @@ namespace nsyshid
 	{
 		switch (type)
 		{
+		case 0x00:
+			return "Ride Chip " + std::to_string(id);
 		case 0x10:
 			return "Grass " + std::to_string(id);
 		case 0x20:
