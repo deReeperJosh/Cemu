@@ -844,14 +844,14 @@ namespace nsyshid::backend::libusb
 										  LIBUSB_REQUEST_TYPE_CLASS | LIBUSB_RECIPIENT_INTERFACE | LIBUSB_ENDPOINT_OUT,
 										  HID_CLASS_SET_REPORT, // Defined in HID Class Specific Requests (7.2)
 										  wValue,
-										  m_interfaceIndex,
+										  0,
 										  message->data,
 										  uint16(message->length & 0xFFFF),
 										  0);
 
 		if (ret != message->length)
 		{
-			cemuLog_log(LogType::Force, "nsyshid::DeviceLibusb::SetReport(): Control Transfer Failed at interface {} : {}", m_interfaceIndex, libusb_error_name(ret));
+			cemuLog_log(LogType::Force, "nsyshid::DeviceLibusb::SetReport(): Control Transfer Failed at interface {} : {}", 0, libusb_error_name(ret));
 			return false;
 		}
 		return true;
