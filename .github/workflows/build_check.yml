@@ -12,6 +12,7 @@ on:
       - "*.md"
     branches:
       - main
+      - windowslibusb
 
 jobs:
   build:
