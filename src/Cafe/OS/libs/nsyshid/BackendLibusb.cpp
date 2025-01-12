@@ -272,7 +272,7 @@ namespace nsyshid::backend::libusb
 		auto device = std::make_shared<DeviceLibusb>(m_ctx,
 													 desc.idVendor,
 													 desc.idProduct,
-													 1,
+													 0,
 													 2,
 													 0,
 													 libusb_get_bus_number(dev),
@@ -519,8 +519,8 @@ namespace nsyshid::backend::libusb
 		{
 			// success
 			cemuLog_log(LogType::Force, "nsyshid::DeviceLibusb::read(): read {} of {} bytes",
-							 actualLength,
-							 message->length);
+						actualLength,
+						message->length);
 			message->bytesRead = actualLength;
 			return ReadResult::Success;
 		}
@@ -559,9 +559,9 @@ namespace nsyshid::backend::libusb
 			// success
 			message->bytesWritten = actualLength;
 			cemuLog_log(LogType::Force,
-							 "nsyshid::DeviceLibusb::write(): wrote {} of {} bytes",
-							 message->bytesWritten,
-							 message->length);
+						"nsyshid::DeviceLibusb::write(): wrote {} of {} bytes",
+						message->bytesWritten,
+						message->length);
 			return WriteResult::Success;
 		}
 		cemuLog_log(LogType::Force,
@@ -829,6 +829,39 @@ namespace nsyshid::backend::libusb
 		return true;
 	}
 
+	void _debugPrintHex(const std::string prefix, const uint8* data, size_t size)
+	{
+		constexpr size_t BYTES_PER_LINE = 16;
+
+		std::string out;
+		for (size_t row_start = 0; row_start < size; row_start += BYTES_PER_LINE)
+		{
+			out += fmt::format("{:06x}: ", row_start);
+			for (size_t i = 0; i < BYTES_PER_LINE; ++i)
+			{
+				if (row_start + i < size)
+				{
+					out += fmt::format("{:02x} ", data[row_start + i]);
+				}
+				else
+				{
+					out += "   ";
+				}
+			}
+			out += " ";
+			for (size_t i = 0; i < BYTES_PER_LINE; ++i)
+			{
+				if (row_start + i < size)
+				{
+					char c = static_cast<char>(data[row_start + i]);
+					out += std::isprint(c, std::locale::classic()) ? c : '.';
+				}
+			}
+			out += "\n";
+		}
+		cemuLog_log(LogType::Force, "[{}] Data: \n{}", prefix, out);
+	}
+
 	bool DeviceLibusb::SetReport(ReportMessage* message)
 	{
 		auto handleLock = AquireHandleLock();
@@ -844,7 +877,7 @@ namespace nsyshid::backend::libusb
 										  LIBUSB_REQUEST_TYPE_CLASS | LIBUSB_RECIPIENT_INTERFACE | LIBUSB_ENDPOINT_OUT,
 										  HID_CLASS_SET_REPORT, // Defined in HID Class Specific Requests (7.2)
 										  wValue,
-										  0,
+										  m_interfaceIndex,
 										  message->data,
 										  uint16(message->length & 0xFFFF),
 										  0);
@@ -852,6 +885,7 @@ namespace nsyshid::backend::libusb
 		if (ret != message->length)
 		{
 			cemuLog_log(LogType::Force, "nsyshid::DeviceLibusb::SetReport(): Control Transfer Failed at interface {} : {}", 0, libusb_error_name(ret));
+			_debugPrintHex("Failed Report", message->data, message->length);
 			return false;
 		}
 		return true;
