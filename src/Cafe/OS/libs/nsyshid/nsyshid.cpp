@@ -371,7 +371,7 @@ namespace nsyshid
 		std::shared_ptr<Device> device = GetDeviceByHandle(hidHandle, true);
 		if (device == nullptr)
 		{
-			cemuLog_logDebug(LogType::Force, "nsyshid.HIDGetDescriptor(): Unable to find device with hid handle {}", hidHandle);
+			cemuLog_log(LogType::Force, "nsyshid.HIDGetDescriptor(): Unable to find device with hid handle {}", hidHandle);
 			return -1;
 		}
 
@@ -426,7 +426,7 @@ namespace nsyshid
 		std::shared_ptr<Device> device = GetDeviceByHandle(hidHandle, true);
 		if (device == nullptr)
 		{
-			cemuLog_logDebug(LogType::Force, "nsyshid.HIDSetIdle(): Unable to find device with hid handle {}", hidHandle);
+			cemuLog_log(LogType::Force, "nsyshid.HIDSetIdle(): Unable to find device with hid handle {}", hidHandle);
 			return -1;
 		}
 
@@ -481,7 +481,7 @@ namespace nsyshid
 		std::shared_ptr<Device> device = GetDeviceByHandle(hidHandle, true);
 		if (device == nullptr)
 		{
-			cemuLog_logDebug(LogType::Force, "nsyshid.HIDSetProtocol(): Unable to find device with hid handle {}", hidHandle);
+			cemuLog_log(LogType::Force, "nsyshid.HIDSetProtocol(): Unable to find device with hid handle {}", hidHandle);
 			return -1;
 		}
 		// issue request (synchronous or asynchronous)
@@ -562,7 +562,7 @@ namespace nsyshid
 		std::shared_ptr<Device> device = GetDeviceByHandle(hidHandle, true);
 		if (device == nullptr)
 		{
-			cemuLog_logDebug(LogType::Force, "nsyshid.HIDSetReport(): Unable to find device with hid handle {}", hidHandle);
+			cemuLog_log(LogType::Force, "nsyshid.HIDSetReport(): Unable to find device with hid handle {}", hidHandle);
 			return -1;
 		}
 
@@ -657,7 +657,7 @@ namespace nsyshid
 		std::shared_ptr<Device> device = GetDeviceByHandle(hidHandle, true);
 		if (device == nullptr)
 		{
-			cemuLog_logDebug(LogType::Force, "nsyshid.HIDRead(): Unable to find device with hid handle {}", hidHandle);
+			cemuLog_log(LogType::Force, "nsyshid.HIDRead(): Unable to find device with hid handle {}", hidHandle);
 			return -1;
 		}
 		sint32 returnCode = -1;
@@ -748,7 +748,7 @@ namespace nsyshid
 		std::shared_ptr<Device> device = GetDeviceByHandle(hidHandle, true);
 		if (device == nullptr)
 		{
-			cemuLog_logDebug(LogType::Force, "nsyshid.HIDWrite(): Unable to find device with hid handle {}", hidHandle);
+			cemuLog_log(LogType::Force, "nsyshid.HIDWrite(): Unable to find device with hid handle {}", hidHandle);
 			return -1;
 		}
 		sint32 returnCode = 0;
