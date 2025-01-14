@@ -91,7 +91,7 @@ namespace nsyshid
 
 	bool KamenRiderGateDevice::GetDescriptor(uint8 descType,
 											 uint8 descIndex,
-											 uint8 lang,
+											 uint16 lang,
 											 uint8* output,
 											 uint32 outputMaxLength)
 	{
@@ -154,6 +154,13 @@ namespace nsyshid
 		return true;
 	}
 
+	bool KamenRiderGateDevice::SetIdle(uint8 ifIndex,
+									   uint8 reportId,
+									   uint8 duration)
+	{
+		return true;
+	}
+
 	bool KamenRiderGateDevice::SetProtocol(uint8 ifIndex, uint8 protocol)
 	{
 		cemuLog_log(LogType::Force, "Ride gate protocol");
@@ -162,7 +169,7 @@ namespace nsyshid
 
 	bool KamenRiderGateDevice::SetReport(ReportMessage* message)
 	{
-		cemuLog_log(LogType::Force, "Ride gate report: \n{}", HexDump(message->originalData, message->originalLength));
+		cemuLog_log(LogType::Force, "Ride gate report: \n{}", HexDump(message->data, message->length));
 		return true;
 	}
 
