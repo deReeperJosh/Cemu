@@ -192,7 +192,7 @@ namespace nsyshid
 			auto it = std::find(deviceList.begin(), deviceList.end(), device);
 			if (it != deviceList.end())
 			{
-				cemuLog_logDebug(LogType::Force,
+				cemuLog_log(LogType::Force,
 								 "nsyshid.AttachDevice(): failed to attach device: {:04x}:{:04x}: already attached",
 								 device->m_vendorId,
 								 device->m_productId);
@@ -203,7 +203,7 @@ namespace nsyshid
 		HID_t* hidDevice = GetFreeHID();
 		if (hidDevice == nullptr)
 		{
-			cemuLog_logDebug(LogType::Force,
+			cemuLog_log(LogType::Force,
 							 "nsyshid.AttachDevice(): failed to attach device: {:04x}:{:04x}: no free device slots left",
 							 device->m_vendorId,
 							 device->m_productId);
@@ -219,7 +219,7 @@ namespace nsyshid
 			DoAttachCallbackAsync(client, device);
 		}
 
-		cemuLog_logDebug(LogType::Force, "nsyshid.AttachDevice(): device attached: {:04x}:{:04x}",
+		cemuLog_log(LogType::Force, "nsyshid.AttachDevice(): device attached: {:04x}:{:04x}",
 						 device->m_vendorId,
 						 device->m_productId);
 		return true;
@@ -234,7 +234,7 @@ namespace nsyshid
 			auto it = std::find(deviceList.begin(), deviceList.end(), device);
 			if (it == deviceList.end())
 			{
-				cemuLog_logDebug(LogType::Force, "nsyshid.DetachDevice(): device not found: {:04x}:{:04x}",
+				cemuLog_log(LogType::Force, "nsyshid.DetachDevice(): device not found: {:04x}:{:04x}",
 								 device->m_vendorId,
 								 device->m_productId);
 				return;
@@ -251,7 +251,7 @@ namespace nsyshid
 
 		device->Close();
 
-		cemuLog_logDebug(LogType::Force, "nsyshid.DetachDevice(): device removed: {:04x}:{:04x}",
+		cemuLog_log(LogType::Force, "nsyshid.DetachDevice(): device removed: {:04x}:{:04x}",
 						 device->m_vendorId,
 						 device->m_productId);
 	}
@@ -271,7 +271,7 @@ namespace nsyshid
 
 	sint32 HIDAddClient(HIDClient_t* hidClient, MPTR callbackFuncMPTR)
 	{
-		cemuLog_logDebug(LogType::Force, "nsyshid.HIDAddClient(0x{:08x},0x{:08x})", hidClient, callbackFuncMPTR);
+		cemuLog_log(LogType::Force, "nsyshid.HIDAddClient(0x{:08x},0x{:08x})", hidClient, callbackFuncMPTR);
 		hidClient->callbackFunc = callbackFuncMPTR;
 
 		std::lock_guard<std::recursive_mutex> lock(hidMutex);
@@ -288,7 +288,7 @@ namespace nsyshid
 
 	sint32 HIDDelClient(HIDClient_t* hidClient)
 	{
-		cemuLog_logDebug(LogType::Force, "nsyshid.HIDDelClient(0x{:08x})", hidClient);
+		cemuLog_log(LogType::Force, "nsyshid.HIDDelClient(0x{:08x})", hidClient);
 
 		std::lock_guard<std::recursive_mutex> lock(hidMutex);
 		DetachClientFromList(hidClient);
@@ -332,7 +332,7 @@ namespace nsyshid
 			}
 			out += "\n";
 		}
-		cemuLog_logDebug(LogType::Force, "[{}] Data: \n{}", prefix, out);
+		cemuLog_log(LogType::Force, "[{}] Data: \n{}", prefix, out);
 	}
 
 	void DoHIDTransferCallback(MPTR callbackFuncMPTR, MPTR callbackParamMPTR, uint32 hidHandle, uint32 errorCode,
@@ -365,7 +365,7 @@ namespace nsyshid
 
 	sint32 HIDGetDescriptor(uint32 hidHandle, uint8 descType, uint8 descIndex, uint16 lang, uint8* output, uint32 outputMaxLength, MPTR cbFuncMPTR, MPTR cbParamMPTR)
 	{
-		cemuLog_logDebug(LogType::Force, "nsyshid.HIDGetDescriptor(0x{:08x}, 0x{:02x}, 0x{:02x}, 0x{:04x}, 0x{:x}, 0x{:08x}, 0x{:08x}, 0x{:08x})",
+		cemuLog_log(LogType::Force, "nsyshid.HIDGetDescriptor(0x{:08x}, 0x{:02x}, 0x{:02x}, 0x{:04x}, 0x{:x}, 0x{:08x}, 0x{:08x}, 0x{:08x})",
 						 hidHandle, descType, descIndex, lang, output, outputMaxLength, cbFuncMPTR, cbParamMPTR);
 
 		std::shared_ptr<Device> device = GetDeviceByHandle(hidHandle, true);
@@ -420,7 +420,7 @@ namespace nsyshid
 
 	sint32 HIDSetIdle(uint32 hidHandle, uint8 ifIndex, uint8 reportId, uint8 duration, MPTR callbackFuncMPTR, MPTR callbackParamMPTR)
 	{
-		cemuLog_logDebug(LogType::Force, "nsyshid.HIDSetIdle(0x{:08x}, 0x{:02x}, 0x{:02x}, 0x{:02x}, 0x{:08x}, 0x{:08x})",
+		cemuLog_log(LogType::Force, "nsyshid.HIDSetIdle(0x{:08x}, 0x{:02x}, 0x{:02x}, 0x{:02x}, 0x{:08x}, 0x{:08x})",
 						 hidHandle, ifIndex, reportId, duration, callbackFuncMPTR, callbackParamMPTR);
 
 		std::shared_ptr<Device> device = GetDeviceByHandle(hidHandle, true);
@@ -475,7 +475,7 @@ namespace nsyshid
 
 	sint32 HIDSetProtocol(uint32 hidHandle, uint8 ifIndex, uint8 protocol, MPTR callbackFuncMPTR, MPTR callbackParamMPTR)
 	{
-		cemuLog_logDebug(LogType::Force, "nsyshid.HIDSetProtocol(0x{:08x}, 0x{:02x}, 0x{:02x}, 0x{:08x}, 0x{:08x})",
+		cemuLog_log(LogType::Force, "nsyshid.HIDSetProtocol(0x{:08x}, 0x{:02x}, 0x{:02x}, 0x{:08x}, 0x{:08x})",
 						 hidHandle, ifIndex, protocol, callbackFuncMPTR, callbackParamMPTR);
 
 		std::shared_ptr<Device> device = GetDeviceByHandle(hidHandle, true);
@@ -509,7 +509,7 @@ namespace nsyshid
 	void _hidSetReportAsync(std::shared_ptr<Device> device, uint8 reportType, uint8 reportId, uint8* data, uint32 length,
 							MPTR callbackFuncMPTR, MPTR callbackParamMPTR)
 	{
-		cemuLog_logDebug(LogType::Force, "_hidSetReportAsync begin");
+		cemuLog_log(LogType::Force, "_hidSetReportAsync begin");
 		ReportMessage message(reportType, reportId, data, length);
 		if (device->SetReport(&message))
 		{
@@ -542,14 +542,14 @@ namespace nsyshid
 		{
 			returnCode = length;
 		}
-		cemuLog_logDebug(LogType::Force, "_hidSetReportSync end. returnCode: {}", returnCode);
+		cemuLog_log(LogType::Force, "_hidSetReportSync end. returnCode: {}", returnCode);
 		coreinit::OSSignalEvent(event);
 		return returnCode;
 	}
 
 	sint32 HIDSetReport(uint32 hidHandle, uint8 reportType, uint8 reportId, uint8* data, uint32 dataLength, MPTR callbackFuncMPTR, MPTR callbackParamMPTR)
 	{
-		cemuLog_logDebug(LogType::Force, "nsyshid.HIDSetReport(0x{:08x}, 0x{:02x}, 0x{:02x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x})",
+		cemuLog_log(LogType::Force, "nsyshid.HIDSetReport(0x{:08x}, 0x{:02x}, 0x{:02x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x})",
 						 hidHandle, reportType, reportId, data, dataLength, callbackFuncMPTR, callbackParamMPTR);
 
 		_debugPrintHex("HIDSetReport", data, dataLength);
@@ -597,7 +597,7 @@ namespace nsyshid
 		ppcDefineParamU32(dataLength, 4);		  // r7
 		ppcDefineParamMPTR(callbackFuncMPTR, 5);  // r8
 		ppcDefineParamMPTR(callbackParamMPTR, 6); // r9
-		cemuLog_logDebug(LogType::Force, "nsyshid.HIDSetReport(0x{:08x}, 0x{:02x}, 0x{:02x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x})", hCPU->gpr[3],
+		cemuLog_log(LogType::Force, "nsyshid.HIDSetReport(0x{:08x}, 0x{:02x}, 0x{:02x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x})", hCPU->gpr[3],
 						 hCPU->gpr[4], hCPU->gpr[5], hCPU->gpr[6], hCPU->gpr[7], hCPU->gpr[8], hCPU->gpr[9]);
 
 		_debugPrintHex("HIDSetReport", data, dataLength);
@@ -639,10 +639,10 @@ namespace nsyshid
 
 	sint32 _hidReadInternalSync(std::shared_ptr<Device> device, uint8* data, sint32 maxLength)
 	{
-		cemuLog_logDebug(LogType::Force, "HidRead Begin (Length 0x{:08x})", maxLength);
+		cemuLog_log(LogType::Force, "HidRead Begin (Length 0x{:08x})", maxLength);
 		if (!device->IsOpened())
 		{
-			cemuLog_logDebug(LogType::Force, "nsyshid.hidReadInternalSync(): cannot read from a non-opened device");
+			cemuLog_log(LogType::Force, "nsyshid.hidReadInternalSync(): cannot read from a non-opened device");
 			return -1;
 		}
 		memset(data, 0, maxLength);
@@ -652,7 +652,7 @@ namespace nsyshid
 		{
 		case Device::ReadResult::Success:
 		{
-			cemuLog_logDebug(LogType::Force, "nsyshid.hidReadInternalSync(): read {} of {} bytes",
+			cemuLog_log(LogType::Force, "nsyshid.hidReadInternalSync(): read {} of {} bytes",
 							 message.bytesRead,
 							 maxLength);
 			return message.bytesRead;
@@ -660,18 +660,18 @@ namespace nsyshid
 		break;
 		case Device::ReadResult::Error:
 		{
-			cemuLog_logDebug(LogType::Force, "nsyshid.hidReadInternalSync(): read error");
+			cemuLog_log(LogType::Force, "nsyshid.hidReadInternalSync(): read error");
 			return -1;
 		}
 		break;
 		case Device::ReadResult::ErrorTimeout:
 		{
-			cemuLog_logDebug(LogType::Force, "nsyshid.hidReadInternalSync(): read error: timeout");
+			cemuLog_log(LogType::Force, "nsyshid.hidReadInternalSync(): read error: timeout");
 			return -108;
 		}
 		break;
 		}
-		cemuLog_logDebug(LogType::Force, "nsyshid.hidReadInternalSync(): read error: unknown");
+		cemuLog_log(LogType::Force, "nsyshid.hidReadInternalSync(): read error: unknown");
 		return -1;
 	}
 
@@ -700,7 +700,7 @@ namespace nsyshid
 
 	sint32 HIDRead(uint32 hidHandle, uint8* data, uint32 maxLength, MPTR callbackFuncMPTR, MPTR callbackParamMPTR)
 	{
-		cemuLog_logDebug(LogType::Force, "nsyshid.HIDRead(0x{:08x},0x{:08x},0x{:08x},0x{:08x},0x{:08x})",
+		cemuLog_log(LogType::Force, "nsyshid.HIDRead(0x{:08x},0x{:08x},0x{:08x},0x{:08x},0x{:08x})",
 						 hidHandle, data, maxLength, callbackFuncMPTR, callbackParamMPTR);
 
 		std::shared_ptr<Device> device = GetDeviceByHandle(hidHandle, true);
@@ -731,10 +731,10 @@ namespace nsyshid
 
 	sint32 _hidWriteInternalSync(std::shared_ptr<Device> device, uint8* data, sint32 maxLength)
 	{
-		cemuLog_logDebug(LogType::Force, "HidWrite Begin (Length 0x{:08x})", maxLength);
+		cemuLog_log(LogType::Force, "HidWrite Begin (Length 0x{:08x})", maxLength);
 		if (!device->IsOpened())
 		{
-			cemuLog_logDebug(LogType::Force, "nsyshid.hidWriteInternalSync(): cannot write to a non-opened device");
+			cemuLog_log(LogType::Force, "nsyshid.hidWriteInternalSync(): cannot write to a non-opened device");
 			return -1;
 		}
 		WriteMessage message(data, maxLength, 0);
@@ -743,25 +743,25 @@ namespace nsyshid
 		{
 		case Device::WriteResult::Success:
 		{
-			cemuLog_logDebug(LogType::Force, "nsyshid.hidWriteInternalSync(): wrote {} of {} bytes", message.bytesWritten,
+			cemuLog_log(LogType::Force, "nsyshid.hidWriteInternalSync(): wrote {} of {} bytes", message.bytesWritten,
 							 maxLength);
 			return message.bytesWritten;
 		}
 		break;
 		case Device::WriteResult::Error:
 		{
-			cemuLog_logDebug(LogType::Force, "nsyshid.hidWriteInternalSync(): write error");
+			cemuLog_log(LogType::Force, "nsyshid.hidWriteInternalSync(): write error");
 			return -1;
 		}
 		break;
 		case Device::WriteResult::ErrorTimeout:
 		{
-			cemuLog_logDebug(LogType::Force, "nsyshid.hidWriteInternalSync(): write error: timeout");
+			cemuLog_log(LogType::Force, "nsyshid.hidWriteInternalSync(): write error: timeout");
 			return -108;
 		}
 		break;
 		}
-		cemuLog_logDebug(LogType::Force, "nsyshid.hidWriteInternalSync(): write error: unknown");
+		cemuLog_log(LogType::Force, "nsyshid.hidWriteInternalSync(): write error: unknown");
 		return -1;
 	}
 
@@ -791,7 +791,7 @@ namespace nsyshid
 
 	sint32 HIDWrite(uint32 hidHandle, uint8* data, uint32 maxLength, MPTR callbackFuncMPTR, MPTR callbackParamMPTR)
 	{
-		cemuLog_logDebug(LogType::Force, "nsyshid.HIDWrite(0x{:x},0x{:08x},0x{:08x},0x{:08x},0x{:08x})",
+		cemuLog_log(LogType::Force, "nsyshid.HIDWrite(0x{:x},0x{:08x},0x{:08x},0x{:08x},0x{:08x})",
 						 hidHandle, data, maxLength, callbackFuncMPTR, callbackParamMPTR);
 
 		std::shared_ptr<Device> device = GetDeviceByHandle(hidHandle, true);
@@ -822,7 +822,7 @@ namespace nsyshid
 
 	void HIDDecodeError(uint32 errorCode, uint32* category, sint32* code)
 	{
-		cemuLog_logDebug(LogType::Force, "nsyshid.HIDDecodeError(0x{:08x},0x{:08x},0x{:08x})", 
+		cemuLog_log(LogType::Force, "nsyshid.HIDDecodeError(0x{:08x},0x{:08x},0x{:08x})", 
 						errorCode, category, code);
 
 		// todo
