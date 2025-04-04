@@ -271,7 +271,7 @@ namespace nsyshid
 
 	sint32 HIDAddClient(HIDClient_t* hidClient, MPTR callbackFuncMPTR)
 	{
-		cemuLog_log(LogType::Force, "nsyshid.HIDAddClient(0x{:08x},0x{:08x})", hidClient, callbackFuncMPTR);
+		cemuLog_log(LogType::Force, "nsyshid.HIDAddClient(client ,0x{:08x})", callbackFuncMPTR);
 		hidClient->callbackFunc = callbackFuncMPTR;
 
 		std::lock_guard<std::recursive_mutex> lock(hidMutex);
@@ -288,7 +288,7 @@ namespace nsyshid
 
 	sint32 HIDDelClient(HIDClient_t* hidClient)
 	{
-		cemuLog_log(LogType::Force, "nsyshid.HIDDelClient(0x{:08x})", hidClient);
+		cemuLog_log(LogType::Force, "nsyshid.HIDDelClient(client)");
 
 		std::lock_guard<std::recursive_mutex> lock(hidMutex);
 		DetachClientFromList(hidClient);
@@ -365,8 +365,8 @@ namespace nsyshid
 
 	sint32 HIDGetDescriptor(uint32 hidHandle, uint8 descType, uint8 descIndex, uint16 lang, uint8* output, uint32 outputMaxLength, MPTR cbFuncMPTR, MPTR cbParamMPTR)
 	{
-		cemuLog_log(LogType::Force, "nsyshid.HIDGetDescriptor(0x{:08x}, 0x{:02x}, 0x{:02x}, 0x{:04x}, 0x{:x}, 0x{:08x}, 0x{:08x}, 0x{:08x})",
-						 hidHandle, descType, descIndex, lang, output, outputMaxLength, cbFuncMPTR, cbParamMPTR);
+		cemuLog_log(LogType::Force, "nsyshid.HIDGetDescriptor(0x{:08x}, 0x{:02x}, 0x{:02x}, 0x{:04x}, output, 0x{:08x}, 0x{:08x}, 0x{:08x})",
+						 hidHandle, descType, descIndex, lang, outputMaxLength, cbFuncMPTR, cbParamMPTR);
 
 		std::shared_ptr<Device> device = GetDeviceByHandle(hidHandle, true);
 		if (device == nullptr)
@@ -549,8 +549,8 @@ namespace nsyshid
 
 	sint32 HIDSetReport(uint32 hidHandle, uint8 reportType, uint8 reportId, uint8* data, uint32 dataLength, MPTR callbackFuncMPTR, MPTR callbackParamMPTR)
 	{
-		cemuLog_log(LogType::Force, "nsyshid.HIDSetReport(0x{:08x}, 0x{:02x}, 0x{:02x}, 0x{:08x}, 0x{:08x}, 0x{:08x}, 0x{:08x})",
-						 hidHandle, reportType, reportId, data, dataLength, callbackFuncMPTR, callbackParamMPTR);
+		cemuLog_log(LogType::Force, "nsyshid.HIDSetReport(0x{:08x}, 0x{:02x}, 0x{:02x}, data, 0x{:08x}, 0x{:08x}, 0x{:08x})",
+						 hidHandle, reportType, reportId, dataLength, callbackFuncMPTR, callbackParamMPTR);
 
 		_debugPrintHex("HIDSetReport", data, dataLength);
 
@@ -700,8 +700,8 @@ namespace nsyshid
 
 	sint32 HIDRead(uint32 hidHandle, uint8* data, uint32 maxLength, MPTR callbackFuncMPTR, MPTR callbackParamMPTR)
 	{
-		cemuLog_log(LogType::Force, "nsyshid.HIDRead(0x{:08x},0x{:08x},0x{:08x},0x{:08x},0x{:08x})",
-						 hidHandle, data, maxLength, callbackFuncMPTR, callbackParamMPTR);
+		cemuLog_log(LogType::Force, "nsyshid.HIDRead(0x{:08x},data,0x{:08x},0x{:08x},0x{:08x})",
+						 hidHandle, maxLength, callbackFuncMPTR, callbackParamMPTR);
 
 		std::shared_ptr<Device> device = GetDeviceByHandle(hidHandle, true);
 		if (device == nullptr)
@@ -791,8 +791,8 @@ namespace nsyshid
 
 	sint32 HIDWrite(uint32 hidHandle, uint8* data, uint32 maxLength, MPTR callbackFuncMPTR, MPTR callbackParamMPTR)
 	{
-		cemuLog_log(LogType::Force, "nsyshid.HIDWrite(0x{:x},0x{:08x},0x{:08x},0x{:08x},0x{:08x})",
-						 hidHandle, data, maxLength, callbackFuncMPTR, callbackParamMPTR);
+		cemuLog_log(LogType::Force, "nsyshid.HIDWrite(0x{:x},data,0x{:08x},0x{:08x},0x{:08x})",
+						 hidHandle, maxLength, callbackFuncMPTR, callbackParamMPTR);
 
 		std::shared_ptr<Device> device = GetDeviceByHandle(hidHandle, true);
 		if (device == nullptr)
@@ -822,8 +822,8 @@ namespace nsyshid
 
 	void HIDDecodeError(uint32 errorCode, uint32* category, sint32* code)
 	{
-		cemuLog_log(LogType::Force, "nsyshid.HIDDecodeError(0x{:08x},0x{:08x},0x{:08x})", 
-						errorCode, category, code);
+		cemuLog_log(LogType::Force, "nsyshid.HIDDecodeError(0x{:08x},category,code)", 
+						errorCode);
 
 		// todo
 		uint32 _category = 29;
