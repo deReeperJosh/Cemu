@@ -604,20 +604,20 @@ namespace nsyshid
 		*(uint16be*)(currentWritePtr + 7) = 0x001D; // wDescriptorLength
 		currentWritePtr = currentWritePtr + 9;
 		// endpoint descriptor 1
-		*(uint8*)(currentWritePtr + 0) = 7;		  // bLength
-		*(uint8*)(currentWritePtr + 1) = 0x05;	  // bDescriptorType
-		*(uint8*)(currentWritePtr + 2) = 0x81;	  // bEndpointAddress
-		*(uint8*)(currentWritePtr + 3) = 0x03;	  // bmAttributes
+		*(uint8*)(currentWritePtr + 0) = 7;			// bLength
+		*(uint8*)(currentWritePtr + 1) = 0x05;		// bDescriptorType
+		*(uint8*)(currentWritePtr + 2) = 0x81;		// bEndpointAddress
+		*(uint8*)(currentWritePtr + 3) = 0x03;		// bmAttributes
 		*(uint16be*)(currentWritePtr + 4) = 0x0040; // wMaxPacketSize
-		*(uint8*)(currentWritePtr + 6) = 0x01;	  // bInterval
+		*(uint8*)(currentWritePtr + 6) = 0x01;		// bInterval
 		currentWritePtr = currentWritePtr + 7;
 		// endpoint descriptor 2
-		*(uint8*)(currentWritePtr + 0) = 7;		  // bLength
-		*(uint8*)(currentWritePtr + 1) = 0x05;	  // bDescriptorType
-		*(uint8*)(currentWritePtr + 2) = 0x02;	  // bEndpointAddress
-		*(uint8*)(currentWritePtr + 3) = 0x03;	  // bmAttributes
+		*(uint8*)(currentWritePtr + 0) = 7;			// bLength
+		*(uint8*)(currentWritePtr + 1) = 0x05;		// bDescriptorType
+		*(uint8*)(currentWritePtr + 2) = 0x02;		// bEndpointAddress
+		*(uint8*)(currentWritePtr + 3) = 0x03;		// bmAttributes
 		*(uint16be*)(currentWritePtr + 4) = 0x0040; // wMaxPacketSize
-		*(uint8*)(currentWritePtr + 6) = 0x01;	  // bInterval
+		*(uint8*)(currentWritePtr + 6) = 0x01;		// bInterval
 		currentWritePtr = currentWritePtr + 7;
 
 		cemu_assert_debug((currentWritePtr - configurationDescriptor) == 0x29);
@@ -628,8 +628,8 @@ namespace nsyshid
 	}
 
 	bool SkylanderPortalDevice::SetIdle(uint8 ifIndex,
-									 uint8 reportId,
-									 uint8 duration)
+										uint8 reportId,
+										uint8 duration)
 	{
 		return true;
 	}
@@ -897,6 +897,39 @@ namespace nsyshid
 		return true;
 	}
 
+	std::string HexDump(const uint8* data, size_t size)
+	{
+		constexpr size_t BYTES_PER_LINE = 16;
+
+		std::string out;
+		for (size_t row_start = 0; row_start < size; row_start += BYTES_PER_LINE)
+		{
+			out += fmt::format("{:06x}: ", row_start);
+			for (size_t i = 0; i < BYTES_PER_LINE; ++i)
+			{
+				if (row_start + i < size)
+				{
+					out += fmt::format("{:02x} ", data[row_start + i]);
+				}
+				else
+				{
+					out += "   ";
+				}
+			}
+			out += " ";
+			for (size_t i = 0; i < BYTES_PER_LINE; ++i)
+			{
+				if (row_start + i < size)
+				{
+					char c = static_cast<char>(data[row_start + i]);
+					out += std::isprint(c, std::locale::classic()) ? c : '.';
+				}
+			}
+			out += "\n";
+		}
+		return out;
+	}
+
 	void SkylanderUSB::QueryBlock(uint8 skyNum, uint8 block, uint8* replyBuf)
 	{
 		std::lock_guard lock(m_skyMutex);
@@ -914,6 +947,7 @@ namespace nsyshid
 		{
 			replyBuf[1] = skyNum;
 		}
+		cemuLog_log(LogType::Force, "Querying Skylander Block {}\n{}", block, HexDump(skylander.data.data() + (16 * block), 16));
 	}
 
 	void SkylanderUSB::WriteBlock(uint8 skyNum, uint8 block,
@@ -936,6 +970,7 @@ namespace nsyshid
 		{
 			replyBuf[1] = skyNum;
 		}
+		cemuLog_log(LogType::Force, "Writing Skylander Block {}\n{}", block, HexDump(skylander.data.data() + (16 * block), 16));
 	}
 
 	std::array<uint8, 64> SkylanderUSB::GetStatus()
