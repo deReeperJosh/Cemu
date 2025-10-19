@@ -11,6 +11,38 @@ namespace nsyshid
 {
 	RideGateUSB g_kamenridegate;
 
+	const std::map<const std::pair<const uint8, const uint8>, const char*> s_listKamenRiders = {
+		{{0x10, 0x10}, "Kamen Rider Drive Wind"},
+		{{0x10, 0x20}, "Kamen Rider Drive Water"},
+		{{0x10, 0x30}, "Kamen Rider Drive Fire"},
+		{{0x10, 0x40}, "Kamen Rider Drive Light"},
+		{{0x10, 0x50}, "Kamen Rider Drive Dark"},
+		{{0x11, 0x10}, "Kamen Rider Gaim Wind"},
+		{{0x11, 0x20}, "Kamen Rider Gaim Water"},
+		{{0x12, 0x20}, "Kamen Rider Wizard Water"},
+		{{0x12, 0x30}, "Kamen Rider Wizard Fire"},
+		{{0x13, 0x40}, "Kamen Rider Fourze Light"},
+		{{0x14, 0x20}, "Kamen Rider 000 Water"},
+		{{0x15, 0x10}, "Kamen Rider Double Wind"},
+		{{0x16, 0x50}, "Kamen Rider Decade Dark"},
+		{{0x17, 0x50}, "Kamen Rider Kiva Dark"},
+		{{0x18, 0x40}, "Kamen Rider Den-O Light"},
+		{{0x19, 0x30}, "Kamen Rider Kabuto Fire"},
+		{{0x1A, 0x30}, "Kamen Rider Hibiki Fire"},
+		{{0x1B, 0x50}, "Kamen Rider Blade Dark"},
+		{{0x1C, 0x50}, "Kamen Rider Faiz Dark"},
+		{{0x1D, 0x10}, "Kamen Rider Ryuki Wind"},
+		{{0x1E, 0x20}, "Kamen Rider Agito Water"},
+		{{0x1F, 0x40}, "Kamen Rider Kuuga Light"},
+	};
+
+	const std::map<const uint8, const char*> s_listChips = {
+		{0x20, "Type Wild"},
+		{0x21, "Kamen Rider Zangetsu"},
+		{0x22, "All Dragon"},
+		{0x31, "Kachidoki Arms"},
+	};
+
 	KamenRiderGateDevice::KamenRiderGateDevice()
 		: Device(0x0E6F, 0x200A, 1, 2, 0)
 	{
@@ -464,21 +496,49 @@ namespace nsyshid
 
 	std::string RideGateUSB::FindFigure(uint8 type, uint8 id)
 	{
+		if (type == 0x00)
+		{
+			for (const auto& it : GetChipList())
+			{
+				if (it.first == id)
+				{
+					return it.second;
+				}
+			}
+			return std::format("Unknown Chip ({})", id);
+		}
+		for (const auto& it : GetRiderList())
+		{
+			if (it.first.first == id && it.first.second == type)
+			{
+				return it.second;
+			}
+		}
 		switch (type)
 		{
 		case 0x10:
-			return "Grass " + std::to_string(id);
+			return std::format("Unknown Rider Wind ({})", id);
 		case 0x20:
-			return "Water " + std::to_string(id);
+			return std::format("Unknown Rider Water ({})", id);
 		case 0x30:
-			return "Fire " + std::to_string(id);
+			return std::format("Unknown Rider Fire ({})", id);
 		case 0x40:
-			return "Light " + std::to_string(id);
+			return std::format("Unknown Rider Light ({})", id);
 		case 0x50:
-			return "Dark " + std::to_string(id);
+			return std::format("Unknown Rider Dark ({})", id);
 		default:
-			return "Unknown " + std::to_string(id);
+			return std::format("Unknown Rider ({})", id);
 		}
+	}
+
+	std::map<const std::pair<const uint8, const uint8>, const char*> RideGateUSB::GetRiderList()
+	{
+		return s_listKamenRiders;
+	}
+
+	std::map<const uint8, const char*> RideGateUSB::GetChipList()
+	{
+		return s_listChips;
 	}
 
 	RideGateUSB::RiderFigure& RideGateUSB::GetFigureByUID(const std::array<uint8, 7> uid)
