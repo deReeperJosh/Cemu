@@ -70,6 +70,8 @@ namespace nsyshid
 		bool CreateFigure(fs::path pathName, uint8 type, uint8 id);
 
 		std::string FindFigure(uint8 type, uint8 id);
+		static std::map<const std::pair<const uint8, const uint8>, const char*> GetRiderList();
+		static std::map<const uint8, const char*> GetChipList();
 
 	  protected:
 		std::mutex m_kamenRiderMutex;

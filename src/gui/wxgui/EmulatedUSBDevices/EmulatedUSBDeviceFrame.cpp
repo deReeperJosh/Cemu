@@ -182,7 +182,7 @@ wxPanel* EmulatedUSBDeviceFrame::AddSummonridePage(wxNotebook* notebook)
 	m_emulateRidegate->Bind(wxEVT_CHECKBOX, [this](wxCommandEvent&) {
 		GetConfig().emulated_usb_devices.emulate_kamen_ridegate =
 			m_emulateRidegate->IsChecked();
-		g_config.Save();
+		GetConfigHandle().Save();
 	});
 	row->Add(m_emulateRidegate, 1, wxEXPAND | wxALL, 2);
 	boxSizer->Add(row, 1, wxEXPAND | wxALL, 2);
@@ -912,7 +912,7 @@ void EmulatedUSBDeviceFrame::LoadKamenRiderPath(uint8 slot, wxString path)
 	std::unique_ptr<FileStream> kamenFile(FileStream::openFile2(_utf8ToPath(path.utf8_string()), true));
 	if (!kamenFile)
 	{
-		wxMessageDialog open_error(this, "Error Opening File: " + path.c_str());
+		wxMessageDialog open_error(this, "Error Opening File: " + path);
 		open_error.ShowModal();
 		return;
 	}
