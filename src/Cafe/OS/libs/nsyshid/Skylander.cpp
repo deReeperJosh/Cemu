@@ -919,6 +919,39 @@ namespace nsyshid
 		return true;
 	}
 
+	// std::string HexDump(const uint8* data, size_t size)
+	// {
+	// 	constexpr size_t BYTES_PER_LINE = 16;
+
+	// 	std::string out;
+	// 	for (size_t row_start = 0; row_start < size; row_start += BYTES_PER_LINE)
+	// 	{
+	// 		out += fmt::format("{:06x}: ", row_start);
+	// 		for (size_t i = 0; i < BYTES_PER_LINE; ++i)
+	// 		{
+	// 			if (row_start + i < size)
+	// 			{
+	// 				out += fmt::format("{:02x} ", data[row_start + i]);
+	// 			}
+	// 			else
+	// 			{
+	// 				out += "   ";
+	// 			}
+	// 		}
+	// 		out += " ";
+	// 		for (size_t i = 0; i < BYTES_PER_LINE; ++i)
+	// 		{
+	// 			if (row_start + i < size)
+	// 			{
+	// 				char c = static_cast<char>(data[row_start + i]);
+	// 				out += std::isprint(c, std::locale::classic()) ? c : '.';
+	// 			}
+	// 		}
+	// 		out += "\n";
+	// 	}
+	// 	return out;
+	// }
+
 	void SkylanderUSB::QueryBlock(uint8 skyNum, uint8 block, uint8* replyBuf)
 	{
 		std::lock_guard lock(m_skyMutex);
@@ -936,6 +969,7 @@ namespace nsyshid
 		{
 			replyBuf[1] = skyNum;
 		}
+		//cemuLog_log(LogType::Force, "Querying Skylander Block {}\n{}", block, HexDump(skylander.data.data() + (16 * block), 16));
 	}
 
 	void SkylanderUSB::WriteBlock(uint8 skyNum, uint8 block,
@@ -958,6 +992,7 @@ namespace nsyshid
 		{
 			replyBuf[1] = skyNum;
 		}
+		//cemuLog_log(LogType::Force, "Writing Skylander Block {}\n{}", block, HexDump(skylander.data.data() + (16 * block), 16));
 	}
 
 	std::array<uint8, 64> SkylanderUSB::GetStatus()
