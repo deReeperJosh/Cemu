@@ -6,6 +6,7 @@
 #include "Common/FileStream.h"
 
 #include <array>
+#include <span>
 #include <random>
 
 namespace nsyshid
@@ -537,6 +538,39 @@ namespace nsyshid
 		return response;
 	}
 
+	std::string HexDump(const uint8* data, size_t size)
+	{
+		constexpr size_t BYTES_PER_LINE = 16;
+
+		std::string out;
+		for (size_t row_start = 0; row_start < size; row_start += BYTES_PER_LINE)
+		{
+			out += fmt::format("{:06x}: ", row_start);
+			for (size_t i = 0; i < BYTES_PER_LINE; ++i)
+			{
+				if (row_start + i < size)
+				{
+					out += fmt::format("{:02x} ", data[row_start + i]);
+				}
+				else
+				{
+					out += "   ";
+				}
+			}
+			out += " ";
+			for (size_t i = 0; i < BYTES_PER_LINE; ++i)
+			{
+				if (row_start + i < size)
+				{
+					char c = static_cast<char>(data[row_start + i]);
+					out += std::isprint(c, std::locale::classic()) ? c : '.';
+				}
+			}
+			out += "\n";
+		}
+		return out;
+	}
+
 	void DimensionsUSB::SendCommand(std::span<const uint8, 32> buf)
 	{
 		const uint8 command = buf[2];
@@ -576,6 +610,7 @@ namespace nsyshid
 		case 0xC8: // Color All
 		{
 			// Send a blank response to acknowledge color has been sent to toypad
+			cemuLog_log(LogType::Force, "Color command {:02x} \n{}", command, HexDump(buf.data(), buf.size()));
 			q_result = {0x55, 0x01, sequence};
 			q_result[3] = GenerateChecksum(q_result, 3);
 			break;
